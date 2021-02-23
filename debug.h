@@ -18,6 +18,13 @@
 
 /* Main Thread */
 #define ENTER_MAIN_THREAD                   0x01
+#define BEFORE_MAIN_LOOP                    0x02
+
+/* WIFI INIT Errors */
+#define SL_TASK_NOT_CREATED                 0x06
+#define SIMPLELINK_DEVICE_NOT_STARTED       0x07
+#define FAILED_TO_CONNECT_AP                0x08
+#define FAILED_TO_ADD_AP_PROFILE            0x09
 
 /* Initialization Errors */
 #define SL_NET_INIT_FAILED                  0x0a
@@ -93,15 +100,18 @@
 #define UART_WRITE_ERROR                    0x71
 
 /* Timer Errors*/
-#define TIMER0_NOT_OPENED                   0x73
-#define TIMER500_NOT_CREATED                0x75
-#define TIMER70_NOT_CREATED                 0x77
-#define ADC_NOT_OPEN                        0x79
+#define TIMER500_NOT_CREATED                0x72
+#define TIMER70_NOT_CREATED                 0x73
+#define ADC_NOT_OPEN                        0x74
 
 /* pthread related errors */
 #define PTHREAD_SET_ATTR_FAILED_MAIN_C      0x7a
 #define PTHREAD_CREATE_FAILED_MAIN_C        0x7b
 #define PTHREAD_NOT_CREATED                 0x7c
+
+/* MQTT Connection Errors */
+#define MQTT_CLIENT_DISCONNECT              0x7d
+#define MQTT_SERVER_DISCONNECT              0x7e
 
 void dbgEvent(unsigned int event);
 void handleFatalError(unsigned int eventLabel);

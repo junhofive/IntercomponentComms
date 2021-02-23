@@ -103,12 +103,6 @@ extern int32_t ti_net_SlNet_initConfig();
 #define MQTT_CONNECTION_PORT_NUMBER     10021
 #endif
 
-mqd_t appQueue;
-int connected;
-int deinit;
-Timer_Handle timer0;
-int longPress = 0;
-
 /* Client ID                                                                 */
 /* If ClientId isn't set, the MAC address of the device will be copied into  */
 /* the ClientID parameter.                                                   */
@@ -119,12 +113,6 @@ enum{
     APP_MQTT_CON_TOGGLE,
     APP_MQTT_DEINIT,
     APP_BTN_HANDLER
-};
-
-struct msgQueue
-{
-    int   event;
-    char* payload;
 };
 
 MQTT_IF_InitParams_t mqttInitParams =
@@ -304,71 +292,19 @@ void timerLEDCallback(Timer_Handle myHandle)
 
 void pushButtonPublishHandler(uint_least8_t index)
 {
-//    int ret;
-//    struct msgQueue queueElement;
     mqttQueueMessage queueElement;
     GPIO_disableInt(CONFIG_GPIO_BUTTON_0);
 
     queueElement.event = APP_MQTT_PUBLISH;
     sendToMqttQueue(&queueElement);
-//    ret = mq_send(appQueue, (const char*)&queueElement, sizeof(struct msgQueue), 0);
-//    if(ret < 0){
-//        LOG_ERROR("msg queue send error %d", ret);
-//    }
 }
 
-#if 0
-void pushButtonConnectionHandler(uint_least8_t index)
-{
-    int ret;
-    struct msgQueue queueElement;
 
-    GPIO_disableInt(CONFIG_GPIO_BUTTON_1);
-
-    ret = Timer_start(timer0);
-    if(ret < 0){
-        LOG_ERROR("failed to start the timer\r\n");
-    }
-
-    queueElement.event = APP_BTN_HANDLER;
-
-    ret = mq_send(appQueue, (const char*)&queueElement, sizeof(struct msgQueue), 0);
-    if(ret < 0){
-        LOG_ERROR("msg queue send error %d", ret);
-    }
-}
-
-int detectLongPress(){
-
-    int buttonPressed;
-
-    do{
-        buttonPressed = GPIO_read(CONFIG_GPIO_BUTTON_1);
-    }while(buttonPressed && !longPress);
-
-    // disabling the timer in case the callback has not yet triggered to avoid updating longPress
-    Timer_stop(timer0);
-
-    if(longPress == 1){
-        longPress = 0;
-        return 1;
-    }
-    else{
-        return 0;
-    }
-}
-#endif
-
-void MQTT_EventCallback(int32_t event, int* connected){
-
-    struct msgQueue queueElement;
-
+void MQTT_EventCallback(int32_t event){
     switch(event){
 
         case MQTT_EVENT_CONNACK:
         {
-            deinit = 0;
-            connected = 1;
             LOG_INFO("MQTT_EVENT_CONNACK\r\n");
             GPIO_clearInt(CONFIG_GPIO_BUTTON_1);
             GPIO_enableInt(CONFIG_GPIO_BUTTON_1);
@@ -395,26 +331,13 @@ void MQTT_EventCallback(int32_t event, int* connected){
 
         case MQTT_EVENT_CLIENT_DISCONNECT:
         {
-            connected = 0;
-            LOG_INFO("MQTT_EVENT_CLIENT_DISCONNECT\r\n");
-            if(deinit == 0){
-                GPIO_clearInt(CONFIG_GPIO_BUTTON_1);
-                GPIO_enableInt(CONFIG_GPIO_BUTTON_1);
-            }
+            handleFatalError(MQTT_CLIENT_DISCONNECT);
             break;
         }
 
         case MQTT_EVENT_SERVER_DISCONNECT:
         {
-            connected = 0;
-
-            LOG_INFO("MQTT_EVENT_SERVER_DISCONNECT\r\n");
-
-            queueElement.event = APP_MQTT_CON_TOGGLE;
-            int res = mq_send(appQueue, (const char*)&queueElement, sizeof(struct msgQueue), 0);
-            if(res < 0){
-                LOG_ERROR("msg queue send error %d", res);
-            }
+            handleFatalError(MQTT_SERVER_DISCONNECT);
             break;
         }
 
@@ -437,16 +360,6 @@ void BrokerCB(char* topic, char* payload){
 
 void ToggleLED1CB(char* topic, char* payload){
     GPIO_toggle(CONFIG_GPIO_LED_0);
-    LOG_INFO("TOPIC: %s \tPAYLOAD: %s\r\n", topic, payload);
-}
-#if 0
-void ToggleLED2CB(char* topic, char* payload){
-    GPIO_toggle(CONFIG_GPIO_LED_1);
-    LOG_INFO("TOPIC: %s \tPAYLOAD: %s\r\n", topic, payload);
-}
-
-void ToggleLED3CB(char* topic, char* payload){
-    GPIO_toggle(CONFIG_GPIO_LED_2);
     LOG_INFO("TOPIC: %s \tPAYLOAD: %s\r\n", topic, payload);
 }
 
@@ -488,7 +401,7 @@ int32_t DisplayAppBanner(char* appName, char* appVersion){
 
     return(ret);
 }
-#endif
+
 int WifiInit(){
 
     int32_t ret;
@@ -504,8 +417,7 @@ int WifiInit(){
     ret |= pthread_attr_setdetachstate(&pattrs_spawn, PTHREAD_CREATE_DETACHED);
     ret = pthread_create(&spawn_thread, &pattrs_spawn, sl_Task, NULL);
     if(ret != 0){
-        LOG_ERROR("could not create simplelink task\n\r");
-        while(1);
+        handleFatalError(SL_TASK_NOT_CREATED);
     }
 
     Network_IF_ResetMCUStateMachine();
@@ -514,28 +426,20 @@ int WifiInit(){
 
     ret = Network_IF_InitDriver(ROLE_STA);
     if(ret < 0){
-        LOG_ERROR("Failed to start SimpleLink Device\n\r");
-        while(1);
+        handleFatalError(SIMPLELINK_DEVICE_NOT_STARTED);
     }
-#if 0
-    DisplayAppBanner(APPLICATION_NAME, APPLICATION_VERSION);
-#endif
-    SetClientIdNamefromMacAddress();
 
-//    GPIO_toggle(CONFIG_GPIO_LED_2);
+    DisplayAppBanner(APPLICATION_NAME, APPLICATION_VERSION);
+
+    SetClientIdNamefromMacAddress();
 
     security_params.Key = (signed char*)SECURITY_KEY;
     security_params.KeyLen = strlen(SECURITY_KEY);
     security_params.Type = SECURITY_TYPE;
 
-    ret = Timer_start(timer0);
-    if(ret < 0){
-        LOG_ERROR("failed to start the timer\r\n");
-    }
-
     ret = Network_IF_ConnectAP(SSID_NAME, security_params);
     if(ret < 0){
-        LOG_ERROR("Connection to an AP failed\n\r");
+        handleFatalError(FAILED_TO_CONNECT_AP);
     }
     else{
 
@@ -547,48 +451,28 @@ int WifiInit(){
 
         ret = sl_WlanProfileAdd((signed char*)SSID_NAME, strlen(SSID_NAME), 0, &securityParams, NULL, 7, 0);
         if(ret < 0){
-            LOG_ERROR("failed to add profile %s\r\n", SSID_NAME);
+            handleFatalError(FAILED_TO_ADD_AP_PROFILE);
         }
         else{
             LOG_INFO("profile added %s\r\n", SSID_NAME);
         }
     }
 
-    Timer_stop(timer0);
-    Timer_close(timer0);
-
     return ret;
 }
 
-void setAllGPIOsToZero() {
-    GPIO_write(CONFIG_GPIO_7, 0);
-    GPIO_write(CONFIG_GPIO_6, 0);
-    GPIO_write(CONFIG_GPIO_5, 0);
-    GPIO_write(CONFIG_GPIO_4, 0);
-    GPIO_write(CONFIG_GPIO_3, 0);
-    GPIO_write(CONFIG_GPIO_2, 0);
-    GPIO_write(CONFIG_GPIO_1, 0);
-    GPIO_write(CONFIG_GPIO_0, 0);
-}
-
 void mainThread(void * args){
-
+    dbgEvent(ENTER_MAIN_THREAD);
     int32_t ret;
-    mq_attr attr;
-    Timer_Params params;
     UART_Handle uartHandle;
-//    struct msgQueue queueElement;
+    mqttQueueMessage queueElement;
     MQTTClient_Handle mqttClientHandle;
 
     uartHandle = InitTerm();
     UART_control(uartHandle, UART_CMD_RXDISABLE, NULL);
 
-    GPIO_init();
     SPI_init();
     Timer_init();
-
-    setAllGPIOsToZero();
-    dbgEvent(ENTER_MAIN_THREAD);
 
     ret = ti_net_SlNet_initConfig();
     if(0 != ret)
@@ -598,60 +482,16 @@ void mainThread(void * args){
 
     // Don't need LEDs
     GPIO_write(CONFIG_GPIO_LED_0, CONFIG_GPIO_LED_OFF);
-#if 0
-    GPIO_write(CONFIG_GPIO_LED_1, CONFIG_GPIO_LED_OFF);
-    GPIO_write(CONFIG_GPIO_LED_2, CONFIG_GPIO_LED_OFF);
-    // Don't need buttons
-#endif
+
     GPIO_setCallback(CONFIG_GPIO_BUTTON_0, pushButtonPublishHandler);
-//    GPIO_setCallback(CONFIG_GPIO_BUTTON_1, pushButtonConnectionHandler);
-
-
-    // configuring the timer to toggle an LED until the AP is connected
-    // Need to have separate timer callback
-    Timer_Params_init(&params);
-    params.period = 1000000;
-    params.periodUnits = Timer_PERIOD_US;
-    params.timerMode = Timer_CONTINUOUS_CALLBACK;
-    params.timerCallback = (Timer_CallBackFxn)timerLEDCallback;
-
-    timer0 = Timer_open(CONFIG_TIMER_0, &params);
-    if (timer0 == NULL) {
-        handleFatalError(TIMER0_NOT_OPENED);
-    }
 
     // replace queue - REPLACED
     createMqttQueue();
-#if 0
-    attr.mq_maxmsg = 10;
-    attr.mq_msgsize = sizeof(struct msgQueue);
-    appQueue = mq_open("appQueue", O_CREAT, 0, &attr);
-    if(((int)appQueue) <= 0){
-        while(1);
-    }
-#endif
+
     ret = WifiInit();
     if(ret < 0){
         handleFatalError(WIFI_INIT_FAILED);
     }
-#if 0
-    GPIO_write(CONFIG_GPIO_LED_0, CONFIG_GPIO_LED_OFF);
-    GPIO_write(CONFIG_GPIO_LED_1, CONFIG_GPIO_LED_OFF);
-    GPIO_write(CONFIG_GPIO_LED_2, CONFIG_GPIO_LED_OFF);
-
-    params.period = 1500000;
-    params.periodUnits = Timer_PERIOD_US;
-    params.timerMode = Timer_ONESHOT_CALLBACK;
-    params.timerCallback = (Timer_CallBackFxn)timerCallback;
-
-    timer0 = Timer_open(CONFIG_TIMER_0, &params);
-    if (timer0 == NULL) {
-        LOG_ERROR("failed to initialize timer\r\n");
-        while(1);
-    }
-#endif
-
-//MQTT_DEMO:
 
     ret = MQTT_IF_Init(mqttInitParams);
     if(ret < 0){
@@ -684,14 +524,14 @@ void mainThread(void * args){
         handleFatalError(MQTT_CONNECT_FAILED);
     }
 
-    // wait for CONNACK
-    while(connected == 0);
+    // wait for CONNACK?
+//    while(connected == 0);
 
     GPIO_enableInt(CONFIG_GPIO_BUTTON_0);
-    mqttQueueMessage queueElement;
+
+    dbgEvent(BEFORE_MAIN_LOOP);
     while(1){
-        // needs replacement
-//        mq_receive(appQueue, (char*)&queueElement, sizeof(struct msgQueue), NULL);
+
         queueElement = receiveFromMqttQueue();
 
         if(queueElement.event == APP_MQTT_PUBLISH){
@@ -707,64 +547,6 @@ void mainThread(void * args){
             GPIO_clearInt(CONFIG_GPIO_BUTTON_0);
             GPIO_enableInt(CONFIG_GPIO_BUTTON_0);
         }
-#if 0
-        else if(queueElement.event == APP_MQTT_CON_TOGGLE){
-
-            LOG_TRACE("APP_MQTT_CON_TOGGLE %d\r\n", connected);
-
-
-            if(connected){
-                ret = MQTT_IF_Disconnect(mqttClientHandle);
-                if(ret >= 0){
-                    connected = 0;
-                }
-            }
-            else{
-                mqttClientHandle = MQTT_IF_Connect(mqttClientParams, mqttConnParams, MQTT_EventCallback);
-                if((int)mqttClientHandle >= 0){
-                    connected = 1;
-                }
-            }
-        }
-#endif
-#if 0
-        else if(queueElement.event == APP_MQTT_DEINIT){
-            break;
-        }
-        else if(queueElement.event == APP_BTN_HANDLER){
-
-            struct msgQueue queueElement;
-
-            ret = detectLongPress();
-            if(ret == 0){
-
-                LOG_TRACE("APP_BTN_HANDLER SHORT PRESS\r\n");
-                queueElement.event = APP_MQTT_CON_TOGGLE;
-            }
-            else{
-
-                LOG_TRACE("APP_BTN_HANDLER LONG PRESS\r\n");
-                queueElement.event = APP_MQTT_DEINIT;
-            }
-
-//            ret = mq_send(appQueue, (const char*)&queueElement, sizeof(struct msgQueue), 0);
-//            if(ret < 0){
-//                LOG_ERROR("msg queue send error %d", ret);
-//            }
-        }
-#endif
-
-//    deinit = 1;
-//    if(connected){
-//        MQTT_IF_Disconnect(mqttClientHandle);
-//    }
-//    MQTT_IF_Deinit();
-//
-//    LOG_INFO("looping the MQTT functionality of the example for demonstration purposes only\r\n");
-//    sleep(2);
-//
-//    }
-//    goto MQTT_DEMO;
     }
 }
 
