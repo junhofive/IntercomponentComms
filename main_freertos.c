@@ -48,6 +48,7 @@
 /* TI-DRIVERS Header files */
 #include "ti_drivers_config.h"
 
+#include "debug.h"
 extern void * mainThread(void *arg0);
 
 /* Stack size in bytes */
@@ -89,10 +90,7 @@ int main(void)
     if(retc != 0)
     {
         /* pthread_attr_setdetachstate() failed */
-        while(1)
-        {
-            ;
-        }
+        handleFatalError(PTHREAD_SET_DETACHED_FAILED_MAIN);
     }
 
     pthread_attr_setschedparam(&pAttrs, &priParam);
@@ -101,20 +99,14 @@ int main(void)
     if(retc != 0)
     {
         /* pthread_attr_setstacksize() failed */
-        while(1)
-        {
-            ;
-        }
+        handleFatalError(PTHREAD_SET_STACKSIZE_FAILED_MAIN);
     }
 
     retc = pthread_create(&thread, &pAttrs, mainThread, NULL);
     if(retc != 0)
     {
         /* pthread_create() failed */
-        while(1)
-        {
-            ;
-        }
+        handleFatalError(PTHREAD_NOT_CREATED);
     }
 
     /* Start the FreeRTOS scheduler */

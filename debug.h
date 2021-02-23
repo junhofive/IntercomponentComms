@@ -105,13 +105,14 @@
 #define ADC_NOT_OPEN                        0x74
 
 /* pthread related errors */
-#define PTHREAD_SET_ATTR_FAILED_MAIN_C      0x7a
-#define PTHREAD_CREATE_FAILED_MAIN_C        0x7b
-#define PTHREAD_NOT_CREATED                 0x7c
+#define PTHREAD_SET_ATTR_FAILED_MAIN        0x7a
+#define PTHREAD_SET_DETACHED_FAILED_MAIN    0x7b
+#define PTHREAD_SET_STACKSIZE_FAILED_MAIN   0x7c
+#define PTHREAD_NOT_CREATED                 0x7d
 
 /* MQTT Connection Errors */
-#define MQTT_CLIENT_DISCONNECT              0x7d
-#define MQTT_SERVER_DISCONNECT              0x7e
+#define MQTT_CLIENT_DISCONNECT              0x7e
+#define MQTT_SERVER_DISCONNECT              0x7f
 
 void dbgEvent(unsigned int event);
 void handleFatalError(unsigned int eventLabel);
