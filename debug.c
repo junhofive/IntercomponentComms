@@ -28,7 +28,7 @@ void dbgEvent(unsigned int event) {
 
         GPIO_write(CONFIG_GPIO_5, event & BIT_5);   // P18/19
 
-        GPIO_write(CONFIG_GPIO_4, event & BIT_4);   // P60/24
+        GPIO_write(CONFIG_GPIO_4, event & BIT_4);   // P53/28
 
         GPIO_write(CONFIG_GPIO_3, event & BIT_3);   // P61/5
 

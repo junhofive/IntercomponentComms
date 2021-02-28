@@ -54,6 +54,7 @@
 
 #include <ti/drivers/SPI.h>
 #include <ti/drivers/GPIO.h>
+#include <ti/drivers/ADC.h>
 #include <ti/drivers/Timer.h>
 
 #include <ti/net/mqtt/mqttclient.h>
@@ -63,9 +64,14 @@
 #include "mqtt_if.h"
 #include "debug_if.h"
 #include "debug.h"
-#include "mqtt_queue.h"
-
 #include "ti_drivers_config.h"
+#include "sensor_task.h"
+#include "timer70.h"
+#include "timer500.h"
+#include "sensor_thread_queue.h"
+#include "mqtt_publish_queue.h"
+
+#define THREADSTACKSIZE   (1024)
 
 extern int32_t ti_net_SlNet_initConfig();
 
@@ -107,6 +113,8 @@ extern int32_t ti_net_SlNet_initConfig();
 /* If ClientId isn't set, the MAC address of the device will be copied into  */
 /* the ClientID parameter.                                                   */
 char ClientId[13] = {'\0'};
+
+int connected = 0;
 
 enum{
     APP_MQTT_PUBLISH,
@@ -289,25 +297,27 @@ void timerLEDCallback(Timer_Handle myHandle)
     GPIO_toggle(CONFIG_GPIO_LED_0);
 }
 
-
+#if 0
 void pushButtonPublishHandler(uint_least8_t index)
 {
-    mqttQueueMessage queueElement;
-    GPIO_disableInt(CONFIG_GPIO_BUTTON_0);
-
+    mqttPublishQueueMessage queueElement;
+//    GPIO_disableInt(CONFIG_GPIO_BUTTON_0);
+    snprintf(queueElement.payload, 50, "{\"SensorAvg\": %d, \"Time\": Test}");
     queueElement.event = APP_MQTT_PUBLISH;
-    sendToMqttQueue(&queueElement);
-}
 
+    sendToMqttPublishQueue(&queueElement);
+}
+#endif
 
 void MQTT_EventCallback(int32_t event){
     switch(event){
 
         case MQTT_EVENT_CONNACK:
         {
+            connected = 1;
             LOG_INFO("MQTT_EVENT_CONNACK\r\n");
-            GPIO_clearInt(CONFIG_GPIO_BUTTON_1);
-            GPIO_enableInt(CONFIG_GPIO_BUTTON_1);
+//            GPIO_clearInt(CONFIG_GPIO_BUTTON_1);
+//            GPIO_enableInt(CONFIG_GPIO_BUTTON_1);
             break;
         }
 
@@ -465,13 +475,19 @@ void mainThread(void * args){
     dbgEvent(ENTER_MAIN_THREAD);
     int32_t ret;
     UART_Handle uartHandle;
-    mqttQueueMessage queueElement;
+    mqttPublishQueueMessage queueElement;
     MQTTClient_Handle mqttClientHandle;
+
+    pthread_t           timer70_thread, timer500_thread, sensor_thread;
+    pthread_attr_t      attrs;
+    struct sched_param  priParam;
+    int                 retc;
 
     uartHandle = InitTerm();
     UART_control(uartHandle, UART_CMD_RXDISABLE, NULL);
 
     SPI_init();
+    ADC_init();
     Timer_init();
 
     ret = ti_net_SlNet_initConfig();
@@ -483,10 +499,11 @@ void mainThread(void * args){
     // Don't need LEDs
     GPIO_write(CONFIG_GPIO_LED_0, CONFIG_GPIO_LED_OFF);
 
-    GPIO_setCallback(CONFIG_GPIO_BUTTON_0, pushButtonPublishHandler);
+//    GPIO_setCallback(CONFIG_GPIO_BUTTON_0, pushButtonPublishHandler);
 
     // replace queue - REPLACED
-    createMqttQueue();
+    createMqttPublishQueue();
+    createSensorThreadQueue();
 
     ret = WifiInit();
     if(ret < 0){
@@ -525,27 +542,55 @@ void mainThread(void * args){
     }
 
     // wait for CONNACK?
-//    while(connected == 0);
 
-    GPIO_enableInt(CONFIG_GPIO_BUTTON_0);
+//    GPIO_enableInt(CONFIG_GPIO_BUTTON_0);
+    pthread_attr_init(&attrs);
+    priParam.sched_priority = 1;
+    retc = pthread_attr_setschedparam(&attrs, &priParam);
+    retc |= pthread_attr_setstacksize(&attrs, THREADSTACKSIZE);
+    retc = pthread_create(&timer70_thread, &attrs, timer70Thread, NULL);
 
+    if (retc != 0) {
+            /* pthread_create() failed */
+        handleFatalError(PTHREAD_NOT_CREATED);
+    }
+
+    retc = pthread_create(&timer500_thread, &attrs, timer500Thread, NULL);
+    if (retc != 0) {
+            /* pthread_create() failed */
+        handleFatalError(PTHREAD_NOT_CREATED);
+    }
+
+    retc = pthread_create(&sensor_thread, &attrs, sensor_task, NULL);
+    if (retc != 0) {
+        /* pthread_create() failed */
+        handleFatalError(PTHREAD_NOT_CREATED);
+    }
+    while(connected == 0);
     dbgEvent(BEFORE_MAIN_LOOP);
     while(1){
-
-        queueElement = receiveFromMqttQueue();
-
+        LOG_INFO("BEFORE_RECEIVE_MQTT_MSG\r\n");
+        dbgEvent(BEFORE_RECEIVE_MQTT_PUBLISH_QUE);
+        queueElement = receiveFromMqttPublishQueue();
+        dbgEvent(AFTER_RECEIVE_MQTT_PUBLISH_QUE);
+        LOG_INFO("AFTER_RECEIVE_MQTT_MSG\r\n");
         if(queueElement.event == APP_MQTT_PUBLISH){
 
             LOG_TRACE("APP_MQTT_PUBLISH\r\n");
-
+#if 0
             MQTT_IF_Publish(mqttClientHandle,
                             "cc32xx/ToggleLED1",
                             "Jason's Board\r\n",
                             strlen("Jason's Board\r\n"),
                             MQTT_QOS_0);
-
-            GPIO_clearInt(CONFIG_GPIO_BUTTON_0);
-            GPIO_enableInt(CONFIG_GPIO_BUTTON_0);
+#endif
+            MQTT_IF_Publish(mqttClientHandle,
+                            "cc32xx/ToggleLED1",
+                            queueElement.payload,
+                            strlen(queueElement.payload),
+                            MQTT_QOS_0);
+//            GPIO_clearInt(CONFIG_GPIO_BUTTON_0);
+//            GPIO_enableInt(CONFIG_GPIO_BUTTON_0);
         }
     }
 }

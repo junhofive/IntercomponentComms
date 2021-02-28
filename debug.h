@@ -62,23 +62,27 @@
 
 /* Sensor Queue */
 #define BEFORE_RECEIVE_SENSOR_QUE           0x31
-#define AFTER_RECEIVE_SENSOR_QUE            0x39
+#define AFTER_RECEIVE_SENSOR_QUE            0x32
 
-#define BEFORE_SEND_TIMER70_MSG             0x3a
-#define AFTER_SEND_TIMER70_MSG              0x3b
+#define BEFORE_SEND_TIMER70_MSG             0x33
+#define AFTER_SEND_TIMER70_MSG              0x34
 
-#define BEFORE_SEND_TIMER500_MSG            0x3e
-#define AFTER_SEND_TIMER500_MSG             0x3f
+#define BEFORE_SEND_TIMER500_MSG            0x35
+#define AFTER_SEND_TIMER500_MSG             0x36
 
 /* UART Queue */
 #define BEFORE_RECEIVE_UART_QUEUE           0x41
-#define AFTER_RECEIVE_UART_QUEUE            0x49
+#define AFTER_RECEIVE_UART_QUEUE            0x42
 
-#define BEFORE_SEND_TYPE70_MSG              0x4a
-#define AFTER_SEND_TYPE70_MSG               0x4b
+#define BEFORE_SEND_TYPE70_MSG              0x43
+#define AFTER_SEND_TYPE70_MSG               0x44
 
-#define BEFORE_SEND_TYPE500_MSG             0x4e
-#define AFTER_SEND_TYPE500_MSG              0x4f
+#define BEFORE_SEND_TYPE500_MSG             0x45
+#define AFTER_SEND_TYPE500_MSG              0x46
+
+/* MQTT Publish Queue */
+#define BEFORE_RECEIVE_MQTT_PUBLISH_QUE     0x4a
+#define AFTER_RECEIVE_MQTT_PUBLISH_QUE      0x4b
 
 /* Sensor Queue Errors */
 #define SENSOR_QUEUE_NOT_CREATED            0x60
@@ -90,10 +94,15 @@
 #define UART_QUEUE_NOT_RECEIVED             0x64
 #define UART_QUEUE_NOT_SENT                 0x65
 
-/* MQTT Queue Errors */
-#define MQTT_QUEUE_NOT_CREATED              0x67
-#define MQTT_QUEUE_NOT_RECEIVED             0x68
-#define MQTT_QUEUE_NOT_SENT                 0x69
+/* MQTT Publish Queue Errors */
+#define MQTT_PUBLISH_QUEUE_NOT_CREATED      0x67
+#define MQTT_PUBLISH_QUEUE_NOT_RECEIVED     0x68
+#define MQTT_PUBLISH_QUEUE_NOT_SENT         0x69
+
+/* MQTT Receive Queue Errors */
+#define MQTT_RECEIVE_QUEUE_NOT_CREATED      0x6a
+#define MQTT_RECEIVE_QUEUE_NOT_RECEIVED     0x6b
+#define MQTT_RECEIVE_QUEUE_NOT_SENT         0x6c
 
 /* UART Write Error */
 #define UART_OPEN_ERROR                     0x70
