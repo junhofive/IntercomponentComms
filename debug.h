@@ -110,8 +110,10 @@
 
 /* Timer Errors*/
 #define TIMER500_NOT_CREATED                0x72
-#define TIMER70_NOT_CREATED                 0x73
-#define ADC_NOT_OPEN                        0x74
+#define TIMER500_NOT_OPENED                 0x73
+#define TIMER70_NOT_CREATED                 0x74
+#define TIMER70_NOT_OPENED                  0x75
+#define ADC_NOT_OPEN                        0x79
 
 /* pthread related errors */
 #define PTHREAD_SET_ATTR_FAILED_MAIN        0x7a

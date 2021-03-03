@@ -70,6 +70,10 @@
 #include "timer500.h"
 #include "sensor_thread_queue.h"
 #include "mqtt_publish_queue.h"
+#include "task_one_queue.h"
+#include "task_one_thread.h"
+#include "task_two_queue.h"
+#include "task_two_thread.h"
 
 #define THREADSTACKSIZE   (1024)
 
@@ -113,8 +117,6 @@ extern int32_t ti_net_SlNet_initConfig();
 /* If ClientId isn't set, the MAC address of the device will be copied into  */
 /* the ClientID parameter.                                                   */
 char ClientId[13] = {'\0'};
-
-int connected = 0;
 
 enum{
     APP_MQTT_PUBLISH,
@@ -314,7 +316,6 @@ void MQTT_EventCallback(int32_t event){
 
         case MQTT_EVENT_CONNACK:
         {
-            connected = 1;
             LOG_INFO("MQTT_EVENT_CONNACK\r\n");
 //            GPIO_clearInt(CONFIG_GPIO_BUTTON_1);
 //            GPIO_enableInt(CONFIG_GPIO_BUTTON_1);
@@ -364,14 +365,24 @@ void MQTT_EventCallback(int32_t event){
  * Topic and payload data is deleted after topic callbacks return.
  * User must copy the topic or payload data if it needs to be saved.
  */
-void BrokerCB(char* topic, char* payload){
+void JasonCB(char* topic, char* payload){
     LOG_INFO("TOPIC: %s \tPAYLOAD: %s\r\n", topic, payload);
 }
 
+void TerryCB(char* topic, char* payload){
+    LOG_INFO("TOPIC: %s \tPAYLOAD: %s\r\n", topic, payload);
+}
+
+void ChainCB(char* topic, char* payload){
+    LOG_INFO("TOPIC: %s \tPAYLOAD: %s\r\n", topic, payload);
+}
+
+#if 0
 void ToggleLED1CB(char* topic, char* payload){
     GPIO_toggle(CONFIG_GPIO_LED_0);
     LOG_INFO("TOPIC: %s \tPAYLOAD: %s\r\n", topic, payload);
 }
+#endif
 
 int32_t DisplayAppBanner(char* appName, char* appVersion){
 
@@ -478,7 +489,8 @@ void mainThread(void * args){
     mqttPublishQueueMessage queueElement;
     MQTTClient_Handle mqttClientHandle;
 
-    pthread_t           timer70_thread, timer500_thread, sensor_thread;
+    pthread_t           timer70_thread, timer500_thread, sensor_thread,
+                        task_one_thread, task_two_thread;
     pthread_attr_t      attrs;
     struct sched_param  priParam;
     int                 retc;
@@ -497,13 +509,14 @@ void mainThread(void * args){
     }
 
     // Don't need LEDs
-    GPIO_write(CONFIG_GPIO_LED_0, CONFIG_GPIO_LED_OFF);
+//    GPIO_write(CONFIG_GPIO_LED_0, CONFIG_GPIO_LED_OFF);
 
-//    GPIO_setCallback(CONFIG_GPIO_BUTTON_0, pushButtonPublishHandler);
-
-    // replace queue - REPLACED
     createMqttPublishQueue();
+#if 0
     createSensorThreadQueue();
+#endif
+    createTaskOneQueue();
+    createTaskTwoQueue();
 
     ret = WifiInit();
     if(ret < 0){
@@ -525,8 +538,13 @@ void mainThread(void * args){
      * messages for the client, after CONNACK the client may receive the messages before the module is aware
      * of the topic callbacks. The user may still call subscribe after connect but have to be aware of this.
      */
-    ret = MQTT_IF_Subscribe(mqttClientHandle, "Broker/To/cc32xx", MQTT_QOS_0, BrokerCB);
-    ret |= MQTT_IF_Subscribe(mqttClientHandle, "cc32xx/ToggleLED1", MQTT_QOS_0, ToggleLED1CB);
+#if 0
+    ret = MQTT_IF_Subscribe(mqttClientHandle, "Chain1", MQTT_QOS_0, ChainCB);
+#endif
+    ret = MQTT_IF_Subscribe(mqttClientHandle, "JasonBoard", MQTT_QOS_0, JasonCB);
+    ret |= MQTT_IF_Subscribe(mqttClientHandle, "TerryBoard", MQTT_QOS_0, TerryCB);
+    ret |= MQTT_IF_Subscribe(mqttClientHandle, "Chain3", MQTT_QOS_0, ChainCB);
+//    ret |= MQTT_IF_Subscribe(mqttClientHandle, "Chain1", MQTT_QOS_0, ToggleLED1CB);
 //    ret |= MQTT_IF_Subscribe(mqttClientHandle, "cc32xx/ToggleLED2", MQTT_QOS_0, ToggleLED2CB);
 //    ret |= MQTT_IF_Subscribe(mqttClientHandle, "cc32xx/ToggleLED3", MQTT_QOS_0, ToggleLED3CB);
     if(ret < 0){
@@ -541,13 +559,11 @@ void mainThread(void * args){
         handleFatalError(MQTT_CONNECT_FAILED);
     }
 
-    // wait for CONNACK?
-
-//    GPIO_enableInt(CONFIG_GPIO_BUTTON_0);
     pthread_attr_init(&attrs);
     priParam.sched_priority = 1;
     retc = pthread_attr_setschedparam(&attrs, &priParam);
     retc |= pthread_attr_setstacksize(&attrs, THREADSTACKSIZE);
+#if 0
     retc = pthread_create(&timer70_thread, &attrs, timer70Thread, NULL);
 
     if (retc != 0) {
@@ -566,31 +582,59 @@ void mainThread(void * args){
         /* pthread_create() failed */
         handleFatalError(PTHREAD_NOT_CREATED);
     }
-    while(connected == 0);
+
+    retc = pthread_create(&task_one_thread, &attrs, task_one, NULL);
+    if (retc != 0) {
+        /* pthread_create() failed */
+        handleFatalError(PTHREAD_NOT_CREATED);
+    }
+#endif
+    retc = pthread_create(&task_two_thread, &attrs, task_two, NULL);
+    if (retc != 0) {
+        /* pthread_create() failed */
+        handleFatalError(PTHREAD_NOT_CREATED);
+    }
+
     dbgEvent(BEFORE_MAIN_LOOP);
     while(1){
-        LOG_INFO("BEFORE_RECEIVE_MQTT_MSG\r\n");
+
         dbgEvent(BEFORE_RECEIVE_MQTT_PUBLISH_QUE);
         queueElement = receiveFromMqttPublishQueue();
         dbgEvent(AFTER_RECEIVE_MQTT_PUBLISH_QUE);
-        LOG_INFO("AFTER_RECEIVE_MQTT_MSG\r\n");
+
         if(queueElement.event == APP_MQTT_PUBLISH){
 
             LOG_TRACE("APP_MQTT_PUBLISH\r\n");
 #if 0
-            MQTT_IF_Publish(mqttClientHandle,
-                            "cc32xx/ToggleLED1",
-                            "Jason's Board\r\n",
-                            strlen("Jason's Board\r\n"),
-                            MQTT_QOS_0);
+            if (queueElement.topic_type == TASK_ONE_TOPIC) {
+                MQTT_IF_Publish(mqttClientHandle,
+                                "JasonBoard",
+                                queueElement.payload,
+                                strlen(queueElement.payload),
+                                MQTT_QOS_0);
+            }
+            else if (queueElement.topic_type == TASK_TWO_TOPIC) {
+                MQTT_IF_Publish(mqttClientHandle,
+                                "Chain2",
+                                queueElement.payload,
+                                strlen(queueElement.payload),
+                                MQTT_QOS_0);
+            }
 #endif
-            MQTT_IF_Publish(mqttClientHandle,
-                            "cc32xx/ToggleLED1",
-                            queueElement.payload,
-                            strlen(queueElement.payload),
-                            MQTT_QOS_0);
-//            GPIO_clearInt(CONFIG_GPIO_BUTTON_0);
-//            GPIO_enableInt(CONFIG_GPIO_BUTTON_0);
+            if (queueElement.topic_type == TASK_ONE_TOPIC) {
+                MQTT_IF_Publish(mqttClientHandle,
+                                "AjayBoard",
+                                queueElement.payload,
+                                            strlen(queueElement.payload),
+                                            MQTT_QOS_0);
+            }
+            else if (queueElement.topic_type == TASK_TWO_TOPIC) {
+                MQTT_IF_Publish(mqttClientHandle,
+                                "Chain4",
+                                queueElement.payload,
+                                strlen(queueElement.payload),
+                                MQTT_QOS_0);
+            }
         }
     }
 }

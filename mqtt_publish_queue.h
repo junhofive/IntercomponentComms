@@ -11,9 +11,15 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 
-#define BUFFER_SIZE 50
+#define BUFFER_SIZE 100
+
+typedef enum {
+    TASK_ONE_TOPIC,
+    TASK_TWO_TOPIC
+} topicType;
 
 typedef struct mqttPublishQueueMessage {
+    topicType topic_type;
     int event;
     char payload[BUFFER_SIZE];
 } mqttPublishQueueMessage;
