@@ -42,10 +42,14 @@ struct Node
 };
 
 #define MAXNODES    15
-struct Node* MyNodeAlloc() {
-    static struct Node Nodes[MAXNODES];
-    static int nodesAllocated = 0;
+#define MAXTOPICLEN 20
 
+static struct Node Nodes[MAXNODES];
+static int nodesAllocated = 0;
+static char topicList[MAXNODES][MAXTOPICLEN];
+static int nextTopic;
+
+struct Node* MyNodeAlloc() {
     if (nodesAllocated == MAXNODES) {
         handleFatalError(0x77); // Needs proper error name
     }
@@ -73,7 +77,9 @@ enum{
     APP_BTN_HANDLER
 };
 
-#define MAX_TOKENS  256
+static pthread_mutex_t mutex;
+
+
 //https://github.com/zserge/jsmn/blob/master/example/simple.c
 // strncmp but in JSON
 static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
@@ -85,8 +91,10 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
 }
 
 
-
-
+#define MAX_TOKENS  20
+//static jsmntok_t tokens[MAX_TOKENS];
+static jsmn_parser parser;
+static jsmntok_t tokens[MAX_TOKENS];
 // Callback invoked by the internal MQTT library to notify the application of MQTT events
 void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, void *data, uint32_t dataLen)
 {
@@ -94,11 +102,13 @@ void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, voi
     taskOneQueueMessage msgTaskOne;
     taskTwoQueueMessage msgTaskTwo;
 
-    static jsmn_parser parser;
-    jsmn_init(&parser);
-    static jsmntok_t tokens[MAX_TOKENS];
-    static int r;
-    static char json_string[BUFFER_SIZE];
+
+
+
+    static int r, i;
+    static int receivedSum;
+    static int calculatedSum;
+
 
     switch((MQTTClient_EventCB)event)
     {
@@ -149,83 +159,77 @@ void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, voi
             receivedMetaData = (MQTTClient_RecvMetaDataCB *)metaData;
 
             message.event = MQTT_EVENT_RECV;
+
+            jsmn_init(&parser);
 #if 0
-            // copying received topic data locally to send over msg queue
-            topic = (char*)malloc(receivedMetaData->topLen+1);
-            memcpy(topic, receivedMetaData->topic, receivedMetaData->topLen);
-            topic[receivedMetaData->topLen] = 0;
-
-            payload = (char*)malloc(dataLen+1);
-            memcpy(payload, data, dataLen);
-            payload[dataLen] = 0;
-
-            msgToSend.message_type = TIMER70_PAYLOAD;
-            strncpy(msgToSend.payload, data, dataLen);
-            message.event =   MQTT_EVENT_RECV;
-#endif
-            if (strncmp(receivedMetaData->topic, "JasonBoard", receivedMetaData->topLen) == 0 ||
+            if (strncmp(receivedMetaData->topic, "JasonBoard", receivedMetaData->topLen) == 0)  ||
                     strncmp(receivedMetaData->topic, "TerryBoard", receivedMetaData->topLen) == 0)  {
+
                 r = jsmn_parse(&parser, data, dataLen, tokens, MAX_TOKENS);
                 if (r < 0) { handleFatalError(0x77); }
-                int i;
+
                 for (i = 1; i < r; i++) {
-                    if (jsoneq(data, &tokens[i], "SensorReading") == 0) { // {"SensorReading": 211, "SensorCount": 5}
-                        msgTaskOne.message_type = TIMER70_MSG;
+                    if (jsoneq(data, &tokens[i], "SensorAvg") == 0) { // {"SensorReading": 211, "SensorCount": 5} // SensorAvg -> SensorAvg": # = SensorReading
+                        if (strncmp(receivedMetaData->topic, "JasonBoard", receivedMetaData->topLen) == 0)
+                            msgTaskOne.message_type = TIMER500_MSG_JASON;
+                        else
+                            msgTaskOne.message_type = TIMER500_MSG_TERRY;
+                        msgTaskOne.SensorAvg = strToInt(data + tokens[i + 1].start,
+                                                        tokens[i + 1].end - tokens[i + 1].start);
+
+                    }
+                    else if (jsoneq(data, &tokens[i], "SensorReading") == 0) { // {"SensorReading": 211, "SensorCount": 5} toekn[1] = "SensorReading" -> token[1] "SensorAvg": 3"
+                        if (strncmp(receivedMetaData->topic, "JasonBoard", receivedMetaData->topLen) == 0)
+                            msgTaskOne.message_type = TIMER70_MSG_JASON;
+                        else
+                            msgTaskOne.message_type = TIMER70_MSG_TERRY;
                         msgTaskOne.SensorReading = strToInt(data + tokens[i + 1].start,
                                                             tokens[i + 1].end - tokens[i + 1].start);
-
                     }
                     else if (jsoneq(data, &tokens[i], "SensorCount") == 0) {
                         msgTaskOne.SensorCount = strToInt(data + tokens[i + 1].start,
                                                           tokens[i + 1].end - tokens[i + 1].start);
                     }
-                    else if (jsoneq(data, &tokens[i], "SensorAvg") == 0) { // {"SensorReading": 211, "SensorCount": 5}
-                        msgTaskOne.message_type = TIMER500_MSG;
-                        msgTaskOne.SensorAvg = strToInt(data + tokens[i + 1].start,
-                                                        tokens[i + 1].end - tokens[i + 1].start);
-                    }
+
                     else if (jsoneq(data, &tokens[i], "Time") == 0) {
                         msgTaskOne.Time = strToInt(data + tokens[i + 1].start,
                                                    tokens[i + 1].end - tokens[i + 1].start);
                     }
 
                     else if (jsoneq(data, &tokens[i], "Checksum") == 0) {
-                        int receivedSum = strToInt(data + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
-                        int calculatedSum;
-                        if (msgTaskOne.message_type = TIMER70_MSG)
+                        receivedSum = strToInt(data + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
+                        if (msgTaskOne.message_type == TIMER70_MSG_JASON || msgTaskOne.message_type == TIMER70_MSG_TERRY) {
                             calculatedSum = strToSum("SensorReading", strlen("SensorReading")) + msgTaskOne.SensorReading
                             + strToSum("SensorCount", strlen("SensorCount")) + msgTaskOne.SensorCount;
-                        else if (msgTaskOne.message_type = TIMER500_MSG)
+                        }
+                        else if (msgTaskOne.message_type == TIMER500_MSG_JASON || msgTaskOne.message_type == TIMER500_MSG_TERRY) {
                             calculatedSum = strToSum("SensorAvg", strlen("SensorAvg")) + msgTaskOne.SensorAvg
                             + strToSum("Time", strlen("Time")) + msgTaskOne.Time;
-                        else
-                            calculatedSum = 0;
 
+                        }
+                        else {
+                            calculatedSum = 0;
+                        }
                         if (receivedSum == calculatedSum) { // Message Verified
                             sendToTaskOneQueue(&msgTaskOne);
 
                         }
                     }
+                    i++;
                 }
             }
-            if (strncmp(receivedMetaData->topic, "Chain3", receivedMetaData->topLen) == 0) {
-//                LOG_INFO("REC - Topic: %s Payload: %s\r\n", "Yay", msgToSend.payload);
+#endif
+            if (strncmp(receivedMetaData->topic, "Chain1", receivedMetaData->topLen) == 0) {
                 r = jsmn_parse(&parser, data, dataLen, tokens, MAX_TOKENS);
                 if (r < 0) { handleFatalError(0x77); }
-                int i;
                 for (i = 1; i < r; i++) {
                     if (jsoneq(data, &tokens[i], "Value") == 0) { // Value -> 509 in sum
-//                        strncpy(json_string, data + tokens[i + 1].start,
-//                                 tokens[i + 1].end - tokens[i + 1].start);
-//                        json_string[tokens[i + 1].end - tokens[i + 1].start] = '\0';
                         msgTaskTwo.value = strToInt(data + tokens[i + 1].start,
                                                   tokens[i + 1].end - tokens[i + 1].start);
-//
 
                     }
                     else if (jsoneq(data, &tokens[i], "Checksum") == 0) {
-                        int receivedSum = strToInt(data + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
-                        int calculatedSum;
+                        receivedSum = strToInt(data + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
                         calculatedSum = strToSum("Value", strlen("Value")) + msgTaskTwo.value;
                         if (receivedSum == calculatedSum) { // Message Verified
                             sendToTaskTwoQueue(&msgTaskTwo);
@@ -234,8 +238,6 @@ void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, voi
                 }
 
             }
-
-//            free(topic);
             break;
         }
         case MQTTClient_DISCONNECT_CB_EVENT:
@@ -325,7 +327,7 @@ void *MQTTAppThread(void *threadParams)
                         }
 
                         // delete the node from the linked list
-                        free(tmp->topicParams.topic);
+//                        free(tmp->topicParams.topic);
                     }
                     else{
                         prev = curr;
@@ -386,7 +388,8 @@ int MQTT_IF_Init(MQTT_IF_InitParams_t initParams)
     }
 
     // the mutex is to protect data in the mMQTTContext structure from being manipulated or accessed at the wrong time
-    mMQTTContext.moduleMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+//    mMQTTContext.moduleMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+    mMQTTContext.moduleMutex = &mutex;
     if(mMQTTContext.moduleMutex == NULL){
         LOG_ERROR("malloc failed: mutex\r\n");
         return -1;
@@ -600,7 +603,16 @@ int MQTT_IF_Subscribe(MQTTClient_Handle mqttClientHandle, char* topic, unsigned 
         return -1;
     }
 
-    topicEntry->topicParams.topic = (char*)malloc((strlen(topic)+1)*sizeof(char));
+//    topicEntry->topicParams.topic = (char*)malloc((strlen(topic)+1)*sizeof(char));
+
+    if (nextTopic >= MAXNODES){
+        handleFatalError(0x77);
+    }
+    if (strlen(topic) + 1 >= MAXTOPICLEN) {
+        handleFatalError(0x77);
+    }
+    topicEntry->topicParams.topic = topicList[nextTopic];
+    nextTopic++;
     if(topicEntry->topicParams.topic == NULL){
         LOG_ERROR("malloc failed: topic\n\r");
         pthread_mutex_unlock(mMQTTContext.moduleMutex);
@@ -620,7 +632,7 @@ int MQTT_IF_Subscribe(MQTTClient_Handle mqttClientHandle, char* topic, unsigned 
         // if the client fails to subscribe to the node remove the topic from the list
         if(ret < 0){
             LOG_ERROR("subscribe failed %d. removing topic from list", ret);
-            free(topicEntry->topicParams.topic);
+//            free(topicEntry->topicParams.topic);
             handleFatalError(0x77); // Change the event name later
 
 //            free(topicEntry);
