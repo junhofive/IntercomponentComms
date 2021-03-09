@@ -16,7 +16,7 @@ static QueueHandle_t task_one_queue = NULL;
 void createTaskOneQueue() {
     task_one_queue = xQueueCreate(QUEUE_LENGTH, sizeof(taskOneQueueMessage));
    if (task_one_queue == NULL){
-//       handleFatalError(task_one_queue_NOT_CREATED);
+       handleFatalError(TASK_ONE_QUEUE_NOT_CREATED);
    }
 }
 taskOneQueueMessage receiveFromTaskOneQueue() {
@@ -30,7 +30,7 @@ taskOneQueueMessage receiveFromTaskOneQueue() {
     }
 
     if (status != pdTRUE) {
-//        handleFatalError(task_one_queue_NOT_RECEIVED);
+        handleFatalError(TASK_ONE_QUEUE_NOT_RECEIVED);
     }
     return receivedMsg;
 }
@@ -46,7 +46,7 @@ void sendToTaskOneQueue(taskOneQueueMessage* targetMessage) {
     }
 
     if (status != pdTRUE) {
-//        handleFatalError(task_one_queue_NOT_SENT);
+        handleFatalError(TASK_ONE_QUEUE_NOT_SENT);
     }
 }
 

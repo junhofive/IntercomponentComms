@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "debug.h"
+#include "statistics_queue.h"
 
 enum{
     APP_MQTT_PUBLISH,
@@ -20,20 +21,35 @@ enum{
     APP_BTN_HANDLER
 };
 
-void *task_two(void *arg0) {
-    taskTwoQueueMessage receivedMsg;
-    mqttPublishQueueMessage msgToSend;
-    int checksum;
-    while (1) {
-        receivedMsg = receiveFromTaskTwoQueue();
 
+
+void *task_two(void *arg0) {
+    dbgEvent(ENTER_TASK_TWO);
+    static taskTwoQueueMessage receivedMsg;
+    mqttPublishQueueMessage msgToSend;
+    statisticsQueueMessage statusMsg;
+
+    static int checksum;
+    dbgEvent(BEFORE_TASK_TWO_LOOP);
+    while (1) {
+        dbgEvent(BEFORE_RECEIVE_TASK_TWO_MSG);
+        receivedMsg = receiveFromTaskTwoQueue();
+        dbgEvent(AFTER_RECEIVE_TASK_TWO_MSG);
 
         msgToSend.event = APP_MQTT_PUBLISH;
         msgToSend.topic_type = TASK_TWO_TOPIC;
-        checksum = strToSum("Value", strlen("Value")) + (receivedMsg.value * 2);
+
+        statusMsg.stat_type = TASK_TWO_STAT;
+        statusMsg.ChainCount = receivedMsg.ChainCount;
+
+        checksum = strToSum("Value", strlen("Value")) + (receivedMsg.value + 1);
         snprintf(msgToSend.payload, BUFFER_SIZE, "{\"Value\": %d, \"Checksum\": %d}",
-                 receivedMsg.value * 2, checksum);
+                 receivedMsg.value + 1, checksum);
+        dbgEvent(BEFORE_SEND_TASK_TWO_MSG_TO_MQTT);
         sendToMqttPublishQueue(&msgToSend);
+        dbgEvent(AFTER_SEND_TASK_TWO_MSG_TO_MQTT);
+
+        sendToStatisticsQueue(&statusMsg);
 
     }
 

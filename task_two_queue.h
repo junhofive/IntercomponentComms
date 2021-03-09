@@ -11,8 +11,6 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 
-#define BUFFER_SIZE 50
-
 typedef enum {
     TIMER70_PAYLOAD,
     TIMER500_PAYLOAD
@@ -20,6 +18,7 @@ typedef enum {
 
 typedef struct taskTwoQueueMessage {
     int value;
+    int ChainCount;
 } taskTwoQueueMessage;
 
 void createTaskTwoQueue();

@@ -16,7 +16,6 @@ static QueueHandle_t sensor_thread_queue = NULL;
 void createSensorThreadQueue() {
     sensor_thread_queue = xQueueCreate(QUEUE_LENGTH, sizeof(SensorThreadMessage));
     if (sensor_thread_queue == NULL) {
-        //error handling
         handleFatalError(SENSOR_QUEUE_NOT_CREATED);
     }
 }

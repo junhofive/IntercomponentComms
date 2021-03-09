@@ -99,16 +99,41 @@ static jsmntok_t tokens[MAX_TOKENS];
 void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, void *data, uint32_t dataLen)
 {
     mqttEventQueueMessage message;
-    taskOneQueueMessage msgTaskOne;
+//    taskOneQueueMessage msgTaskOne;
     taskTwoQueueMessage msgTaskTwo;
-
-
-
 
     static int r, i;
     static int receivedSum;
     static int calculatedSum;
+    // publicationCnt++; -> declared globally
+    // -> needs to be sent to statistics thread
 
+    /* Statistics Task */
+
+    /*
+     * statistics_thread.c
+     *
+     *
+     * static int msgCount;
+     *
+     * void *task()
+     *
+     * msgCount = 0;
+     *
+     * while(1) {
+     *
+     *  receivedMsg = receiveMSGfromSTatsiQuee()
+     *
+     *  msgCount++;
+     *
+     *  receivedMsg.SensorCount/ChainCount -> 100th sensor message
+     *  if (msgCount < receivedMsg.SensorCount) -> msgCount = 98, receivedMsg.SensorCount = 100
+     *      lost_messages = SensorCount - msgCount
+     * }
+     *
+     *
+     *
+     */
 
     switch((MQTTClient_EventCB)event)
     {
@@ -228,9 +253,14 @@ void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, voi
                                                   tokens[i + 1].end - tokens[i + 1].start);
 
                     }
+                    else if (jsoneq(data, &tokens[i], "ChainCount") == 0) {
+                        msgTaskTwo.ChainCount = strToInt(data + tokens[i + 1].start,
+                                                    tokens[i + 1].end - tokens[i + 1].start);
+                    }
                     else if (jsoneq(data, &tokens[i], "Checksum") == 0) {
                         receivedSum = strToInt(data + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
                         calculatedSum = strToSum("Value", strlen("Value")) + msgTaskTwo.value;
+                        calculatedSum += strToSum("ChainCount", strlen("ChainCount")) + msgTaskTwo.ChainCount;
                         if (receivedSum == calculatedSum) { // Message Verified
                             sendToTaskTwoQueue(&msgTaskTwo);
                         }

@@ -8,7 +8,7 @@
 #ifndef STR_CONVERTER_H_
 #define STR_CONVERTER_H_
 
-int stringToInt(const char* str, int len);
+int strToInt(const char* str, int len);
 
 int strToSum(const char* str, int len);
 

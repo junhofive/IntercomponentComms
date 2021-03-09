@@ -84,6 +84,30 @@
 #define BEFORE_RECEIVE_MQTT_PUBLISH_QUE     0x4a
 #define AFTER_RECEIVE_MQTT_PUBLISH_QUE      0x4b
 
+/* MQTT Publish */
+#define BEFORE_PUBLISH_TO_MQTT              0x4c
+#define AFTER_PUBLISH_TO_MQTT               0x4d
+
+/* Task One Thread */
+#define ENTER_TASK_ONE                      0x50
+#define BEFORE_TASK_ONE_LOOP                0x51
+
+#define BEFORE_RECEIVE_TASK_ONE_MSG         0x52
+#define AFTER_RECEIVE_TASK_ONE_MSG          0x53
+
+#define BEFORE_SEND_TASK_ONE_MSG_TO_MQTT    0x54
+#define AFTER_SEND_TASK_ONE_MSG_TO_MQTT     0x55
+
+/* Task Two Thread */
+#define ENTER_TASK_TWO                      0x56
+#define BEFORE_TASK_TWO_LOOP                0x57
+
+#define BEFORE_RECEIVE_TASK_TWO_MSG         0x58
+#define AFTER_RECEIVE_TASK_TWO_MSG          0x59
+
+#define BEFORE_SEND_TASK_TWO_MSG_TO_MQTT    0x5a
+#define AFTER_SEND_TASK_TWO_MSG_TO_MQTT     0x5b
+
 /* Sensor Queue Errors */
 #define SENSOR_QUEUE_NOT_CREATED            0x60
 #define SENSOR_QUEUE_NOT_RECEIVED           0x61
@@ -104,15 +128,25 @@
 #define MQTT_RECEIVE_QUEUE_NOT_RECEIVED     0x6b
 #define MQTT_RECEIVE_QUEUE_NOT_SENT         0x6c
 
+/* Task One Queue Errors */
+#define TASK_ONE_QUEUE_NOT_CREATED          0x6d
+#define TASK_ONE_QUEUE_NOT_RECEIVED         0x6e
+#define TASK_ONE_QUEUE_NOT_SENT             0x6f
+
+/* Task One Queue Errors */
+#define TASK_TWO_QUEUE_NOT_CREATED          0x6d
+#define TASK_TWO_QUEUE_NOT_RECEIVED         0x6e
+#define TASK_TWO_QUEUE_NOT_SENT             0x6f
+
 /* UART Write Error */
-#define UART_OPEN_ERROR                     0x70
-#define UART_WRITE_ERROR                    0x71
+#define UART_OPEN_ERROR                     0x73
+#define UART_WRITE_ERROR                    0x74
 
 /* Timer Errors*/
-#define TIMER500_NOT_CREATED                0x72
-#define TIMER500_NOT_OPENED                 0x73
-#define TIMER70_NOT_CREATED                 0x74
-#define TIMER70_NOT_OPENED                  0x75
+#define TIMER500_NOT_CREATED                0x75
+#define TIMER500_NOT_OPENED                 0x76
+#define TIMER70_NOT_CREATED                 0x77
+#define TIMER70_NOT_OPENED                  0x78
 #define ADC_NOT_OPEN                        0x79
 
 /* pthread related errors */
