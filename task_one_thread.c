@@ -14,6 +14,7 @@
 #include <string.h>
 #include <ti/drivers/Timer.h>
 #include "ti_drivers_config.h"
+#include "debug_if.h"
 
 #include "statistics_queue.h"
 
@@ -110,7 +111,7 @@ void *task_one(void *arg0) {
     dbgEvent(ENTER_TASK_ONE);
     static taskOneQueueMessage receivedMsg;
     mqttPublishQueueMessage msgToSend;
-    statisticsQueueMessage statusMsg;
+//    statisticsQueueMessage statusMsg;
 
     static int checksum;
     dbgEvent(BEFORE_TASK_ONE_LOOP);
@@ -122,7 +123,7 @@ void *task_one(void *arg0) {
         msgToSend.event = APP_MQTT_PUBLISH;
         msgToSend.topic_type = TASK_ONE_TOPIC;
 
-        statusMsg.stat_type = TASK_ONE_STAT;
+//        statusMsg.stat_type = TASK_ONE_STAT;
 
         if (receivedMsg.message_type == TIMER70_MSG) {
             checksum = strToSum("SensorReading", strlen("SensorReading")) + receivedMsg.SensorReading
@@ -140,7 +141,7 @@ void *task_one(void *arg0) {
         sendToMqttPublishQueue(&msgToSend);
         dbgEvent(AFTER_SEND_TASK_ONE_MSG_TO_MQTT);
 
-        sendToStatisticsQueue(&statusMsg);
+//        sendToStatisticsQueue(&statusMsg);
     }
 }
 

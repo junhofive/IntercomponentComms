@@ -75,8 +75,10 @@
 #include "task_two_queue.h"
 #include "task_two_thread.h"
 #include "statistics_queue.h"
+#include "statistics_task.h"
 
 #define THREADSTACKSIZE   (1024)
+#define THREADSTACKSIZE_SM (768)
 
 extern int32_t ti_net_SlNet_initConfig();
 
@@ -490,7 +492,7 @@ void mainThread(void * args){
     mqttPublishQueueMessage queueElement;
     MQTTClient_Handle mqttClientHandle;
 
-    pthread_t           timer70_thread, timer500_thread, sensor_thread,
+    pthread_t           timer70_thread, timer500_thread, sensor_thread, stat_thread,
                         task_one_thread, task_two_thread;
     pthread_attr_t      attrs;
     struct sched_param  priParam;
@@ -517,7 +519,7 @@ void mainThread(void * args){
     createTaskOneQueue();
     createTaskTwoQueue();
 
-    createStatisticsQueue();
+//    createStatisticsQueue();
 
     ret = WifiInit();
     if(ret < 0){
@@ -556,22 +558,24 @@ void mainThread(void * args){
     }
 
     mqttClientHandle = MQTT_IF_Connect(mqttClientParams, mqttConnParams, MQTT_EventCallback);
+
     if(mqttClientHandle < 0){
         handleFatalError(MQTT_CONNECT_FAILED);
     }
 
     pthread_attr_init(&attrs);
+
     priParam.sched_priority = 1;
     retc = pthread_attr_setschedparam(&attrs, &priParam);
-    retc |= pthread_attr_setstacksize(&attrs, THREADSTACKSIZE);
+
+    retc |= pthread_attr_setstacksize(&attrs, THREADSTACKSIZE); // THREADSTACKSIZE_SM
 
     retc = pthread_create(&timer70_thread, &attrs, timer70Thread, NULL);
-
     if (retc != 0) {
             /* pthread_create() failed */
+
         handleFatalError(PTHREAD_NOT_CREATED);
     }
-
     retc = pthread_create(&timer500_thread, &attrs, timer500Thread, NULL);
     if (retc != 0) {
             /* pthread_create() failed */
@@ -583,7 +587,12 @@ void mainThread(void * args){
         /* pthread_create() failed */
         handleFatalError(PTHREAD_NOT_CREATED);
     }
-
+//    retc = pthread_create(&stat_thread, &attrs, task_statistics, NULL);
+//    if (retc != 0) {
+//                /* pthread_create() failed */
+//            //
+//        handleFatalError(PTHREAD_NOT_CREATED);
+//    }
     retc = pthread_create(&task_one_thread, &attrs, task_one, NULL);
     if (retc != 0) {
         /* pthread_create() failed */
@@ -593,8 +602,12 @@ void mainThread(void * args){
     retc = pthread_create(&task_two_thread, &attrs, task_two, NULL);
     if (retc != 0) {
         /* pthread_create() failed */
+
         handleFatalError(PTHREAD_NOT_CREATED);
     }
+
+
+
 
     dbgEvent(BEFORE_MAIN_LOOP);
     while(1){
@@ -619,13 +632,14 @@ void mainThread(void * args){
                                 strlen(queueElement.payload),
                                 MQTT_QOS_0);
             }
-            else if (queueElement.topic_type == STATUS_TOPIC) {
-                MQTT_IF_Publish(mqttClientHandle,
-                                "JasonStatus",
-                                queueElement.payload,
-                                strlen(queueElement.payload),
-                                MQTT_QOS_0);
-            }
+//            else if (queueElement.topic_type == STATUS_TOPIC) {
+//                LOG_INFO("HERE\r\n");
+//                MQTT_IF_Publish(mqttClientHandle,
+//                                "JasonStatus",
+//                                queueElement.payload,
+//                                strlen(queueElement.payload),
+//                                MQTT_QOS_0);
+//            }
             dbgEvent(AFTER_PUBLISH_TO_MQTT);
 #if 0
             if (queueElement.topic_type == TASK_ONE_TOPIC) {

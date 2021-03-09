@@ -25,9 +25,9 @@ enum{
 
 void *task_two(void *arg0) {
     dbgEvent(ENTER_TASK_TWO);
-    static taskTwoQueueMessage receivedMsg;
+    taskTwoQueueMessage receivedMsg;
     mqttPublishQueueMessage msgToSend;
-    statisticsQueueMessage statusMsg;
+//    statisticsQueueMessage statusMsg;
 
     static int checksum;
     dbgEvent(BEFORE_TASK_TWO_LOOP);
@@ -39,8 +39,8 @@ void *task_two(void *arg0) {
         msgToSend.event = APP_MQTT_PUBLISH;
         msgToSend.topic_type = TASK_TWO_TOPIC;
 
-        statusMsg.stat_type = TASK_TWO_STAT;
-        statusMsg.ChainCount = receivedMsg.ChainCount;
+//        statusMsg.stat_type = TASK_TWO_STAT;
+//        statusMsg.ChainCount = receivedMsg.ChainCount;
 
         checksum = strToSum("Value", strlen("Value")) + (receivedMsg.value + 1);
         snprintf(msgToSend.payload, BUFFER_SIZE, "{\"Value\": %d, \"Checksum\": %d}",
@@ -49,7 +49,7 @@ void *task_two(void *arg0) {
         sendToMqttPublishQueue(&msgToSend);
         dbgEvent(AFTER_SEND_TASK_TWO_MSG_TO_MQTT);
 
-        sendToStatisticsQueue(&statusMsg);
+//        sendToStatisticsQueue(&statusMsg);
 
     }
 

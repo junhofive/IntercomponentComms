@@ -253,14 +253,14 @@ void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, voi
                                                   tokens[i + 1].end - tokens[i + 1].start);
 
                     }
-                    else if (jsoneq(data, &tokens[i], "ChainCount") == 0) {
-                        msgTaskTwo.ChainCount = strToInt(data + tokens[i + 1].start,
-                                                    tokens[i + 1].end - tokens[i + 1].start);
-                    }
+//                    else if (jsoneq(data, &tokens[i], "ChainCount") == 0) {
+//                        msgTaskTwo.ChainCount = strToInt(data + tokens[i + 1].start,
+//                                                    tokens[i + 1].end - tokens[i + 1].start);
+//                    }
                     else if (jsoneq(data, &tokens[i], "Checksum") == 0) {
                         receivedSum = strToInt(data + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
                         calculatedSum = strToSum("Value", strlen("Value")) + msgTaskTwo.value;
-                        calculatedSum += strToSum("ChainCount", strlen("ChainCount")) + msgTaskTwo.ChainCount;
+//                        calculatedSum += strToSum("ChainCount", strlen("ChainCount")) + msgTaskTwo.ChainCount;
                         if (receivedSum == calculatedSum) { // Message Verified
                             sendToTaskTwoQueue(&msgTaskTwo);
                         }

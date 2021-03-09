@@ -14,6 +14,8 @@
 #include "ti_drivers_config.h"
 #include <stdio.h>
 #include "debug.h"
+#include <string.h>
+#include "debug_if.h"
 
 enum{
     APP_MQTT_PUBLISH,
@@ -68,7 +70,7 @@ void *task_statistics(void *arg0) {
 
     while(1) {
         receivedMsg = receiveFromStatisticsQueue();
-
+//        LOG_INFO("STAT\r\n");
         if (receivedMsg.stat_type == TASK_ONE_STAT) {
             totalTaskOneSent++;
         }
@@ -99,7 +101,7 @@ void *task_statistics(void *arg0) {
 void timer10sCallback(Timer_Handle myHandle, int_fast16_t status){
     mqttPublishQueueMessage msgToSend;
     static int checksum;
-
+    LOG_INFO("STAT_CALLBACK\r\n");
     msgToSend.event = APP_MQTT_PUBLISH;
     msgToSend.event = STATUS_TOPIC;
 
@@ -114,8 +116,8 @@ void timer10sCallback(Timer_Handle myHandle, int_fast16_t status){
       totalTaskOneSent + totalTaskTwoSent,
       receiveSuccess,
       receiveTotal,
-      receiveSuccess - receiveTotal
-      , checksum);
+      receiveSuccess - receiveTotal, checksum);                  // ChainCount = 5 -> We have should've received until 5th message
+                                    // receiveTotal = 4 -> We are missing 1
 
     sendToMqttPublishQueue(&msgToSend);
 }
