@@ -245,8 +245,12 @@ class App_Dashboard(QWidget): # inherit from QMainWindow
     @pyqtSlot()
     def click_publish_chain(self):
         value = self.textbox_chain.text() # take the value input in the textbox
-        # mqtt.publish(value)
-        print("you clicked pub chain! Value = ", value)
+        # create the chain JSON message:
+        payload= {"Value": int(value), "ChainCount": 1, "Checksum": 1}
+        checksum = calculate_checksum(payload)
+        payload["Checksum"] = checksum
+        payload_str = json.dumps(payload)
+        mqttc.publish("Chain1", payload_str) 
 
     @pyqtSlot()
     def click_publish_seq(self):
@@ -261,14 +265,11 @@ class App_Dashboard(QWidget): # inherit from QMainWindow
 
     @pyqtSlot()
     def click_start(self):
-        # mqtt.publish(value)
-        print("you clicked start!")
+        mqttc.publish("start","START") 
 
     @pyqtSlot()
     def click_stop(self):
-        value = self.textbox_seq.text() # take the value input in the textbox
-        # mqtt.publish(value)
-        print("you clicked stop!")
+        mqttc.publish("stop","STOP")
 
 
     def selectionchange(self):
