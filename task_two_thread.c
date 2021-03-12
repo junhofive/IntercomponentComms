@@ -13,6 +13,7 @@
 #include <string.h>
 #include "debug.h"
 #include "statistics_queue.h"
+#include "debug_if.h"
 
 enum{
     APP_MQTT_PUBLISH,
@@ -25,9 +26,9 @@ enum{
 
 void *task_two(void *arg0) {
     dbgEvent(ENTER_TASK_TWO);
-    taskTwoQueueMessage receivedMsg;
-    mqttPublishQueueMessage msgToSend;
-//    statisticsQueueMessage statusMsg;
+    static taskTwoQueueMessage receivedMsg;
+    static mqttPublishQueueMessage msgToSend;
+    static statisticsQueueMessage statusMsg;
 
     static int checksum;
     dbgEvent(BEFORE_TASK_TWO_LOOP);
@@ -39,17 +40,18 @@ void *task_two(void *arg0) {
         msgToSend.event = APP_MQTT_PUBLISH;
         msgToSend.topic_type = TASK_TWO_TOPIC;
 
-//        statusMsg.stat_type = TASK_TWO_STAT;
-//        statusMsg.ChainCount = receivedMsg.ChainCount;
+        statusMsg.stat_type = TASK_TWO_STAT;
+        statusMsg.ChainCount = receivedMsg.ChainCount;
 
         checksum = strToSum("Value", strlen("Value")) + (receivedMsg.value + 1);
-        snprintf(msgToSend.payload, BUFFER_SIZE, "{\"Value\": %d, \"Checksum\": %d}",
-                 receivedMsg.value + 1, checksum);
+        checksum += strToSum("ChainCount", strlen("ChainCount")) + receivedMsg.ChainCount;
+        snprintf(msgToSend.payload, BUFFER_SIZE, "{\"Value\": %d, \"ChainCount\": %d, \"Checksum\": %d}",
+                 receivedMsg.value + 1, receivedMsg.ChainCount, checksum);
         dbgEvent(BEFORE_SEND_TASK_TWO_MSG_TO_MQTT);
         sendToMqttPublishQueue(&msgToSend);
         dbgEvent(AFTER_SEND_TASK_TWO_MSG_TO_MQTT);
 
-//        sendToStatisticsQueue(&statusMsg);
+        sendToStatisticsQueue(&statusMsg);
 
     }
 

@@ -8,9 +8,11 @@
 #include <str_converter.h>
 
 //https://stackoverflow.com/questions/9631225/convert-strings-specified-by-length-not-nul-terminated-to-int-float
+static int i;
+static int ret;
+
 int strToInt(const char* str, int len) {
-    int i;
-    int ret = 0;
+    ret = 0;
     for(i = 0; i < len; ++i)
     {
         ret = ret * 10 + (str[i] - '0');
@@ -19,8 +21,7 @@ int strToInt(const char* str, int len) {
 }
 
 int strToSum(const char* str, int len) {
-    int i;
-    int ret = 0;
+    ret = 0;
     for(i = 0; i < len; ++i)
     {
         ret += str[i];

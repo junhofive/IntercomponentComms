@@ -11,7 +11,7 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 
-#define BUFFER_SIZE 120
+#define BUFFER_SIZE 200
 
 typedef enum {
     TASK_ONE_TOPIC,

@@ -54,12 +54,12 @@ int distanceTable(uint32_t microVolt) {
  * This function is used to convert the sensor reading to mm
  */
 int convert_to_mm(ADC_Handle adc){
-    int_fast16_t res;
-    uint16_t adcValue0;
-    uint32_t adcValue0MicroVolt;
+    static int_fast16_t res;
+    static uint16_t adcValue0;
+    static uint32_t adcValue0MicroVolt;
 
-    int distance;
-    float voltage_ratio;
+    static int distance;
+    static float voltage_ratio;
     // Blocking mode conversion
     res = ADC_convert(adc, &adcValue0);
 
@@ -121,10 +121,10 @@ void timer70Callback(Timer_Handle myHandle, int_fast16_t status)
     // Using pin 59, CONFIG_ADC_0
     // blocking call: portMAX_DELAY
     dbgEvent(ENTER_TIMER70);
-    ADC_Handle  adc;
-    ADC_Params  params;
-    int         distance;
-    SensorThreadMessage message;
+    static ADC_Handle  adc;
+    static ADC_Params  params;
+    static int  distance;
+    static SensorThreadMessage message;
 
     ADC_Params_init(&params);
 

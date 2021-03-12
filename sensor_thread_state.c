@@ -25,7 +25,7 @@ static int sensorTotal = 0, sensorCount = 0;
 static threadState currentState = INIT_AVERAGE;
 
 void enterStateMachine(SensorThreadMessage *receivedMessage) {
-    taskOneQueueMessage message;
+    static taskOneQueueMessage message;
     switch (currentState) {
         case INIT_AVERAGE:
             dbgEvent(INIT_AVERAGE_STATE);
@@ -47,37 +47,19 @@ void enterStateMachine(SensorThreadMessage *receivedMessage) {
                     dbgEvent(BEFORE_SEND_TYPE70_MSG);
                     sendToTaskOneQueue(&message);
                     dbgEvent(AFTER_SEND_TYPE70_MSG);
-#if 0
-                    mqttPublishQueueMessage message;
-
-                    message.event = APP_MQTT_PUBLISH;
-                    snprintf(message.payload, BUFFER_SIZE, "{\"SensorReading\": %d, \"SensorCount\": %d}", receivedMessage->value, sensorCount);
-                    dbgEvent(BEFORE_SEND_TYPE70_MSG);
-                    sendToMqttPublishQueue(&message);
-                    dbgEvent(AFTER_SEND_TYPE70_MSG);
-#endif
                 }
             }
             if (receivedMessage->message_type == TIMER500_MESSAGE) {
-                int averageSensorValue = 0;
-
-                if (sensorCount != 0) {
-                    averageSensorValue = sensorTotal / sensorCount;
-                }
                 message.message_type = TIMER500_MSG;
-                message.SensorAvg = averageSensorValue;
+                if (sensorCount != 0)
+                    message.SensorAvg = sensorTotal / sensorCount;
+                else
+                    message.SensorAvg = 0;
                 message.Time = receivedMessage->value;
                 dbgEvent(BEFORE_SEND_TYPE500_MSG);
                 sendToTaskOneQueue(&message);
                 dbgEvent(AFTER_SEND_TYPE500_MSG);
-#if 0
-                mqttPublishQueueMessage message;
-                message.event = APP_MQTT_PUBLISH;
-                snprintf(message.payload, BUFFER_SIZE, "{\"SensorAvg\": %d, \"Time\": %d}", averageSensorValue, receivedMessage->value);
-                dbgEvent(BEFORE_SEND_TYPE500_MSG);
-                sendToMqttPublishQueue(&message);
-                dbgEvent(AFTER_SEND_TYPE500_MSG);
-#endif
+
                 dbgEvent(LEAVE_UPDATE_AVERAGE_STATE);
                 currentState = INIT_AVERAGE;
 

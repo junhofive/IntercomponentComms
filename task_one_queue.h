@@ -13,7 +13,11 @@
 
 typedef enum {
     TIMER70_MSG,
-    TIMER500_MSG
+    TIMER500_MSG,
+    TIMER70_JASON,
+    TIMER500_JASON,
+    TIMER70_TERRY,
+    TIMER500_TERRY
 } msgType;
 
 typedef struct taskOneQueueMessage {
@@ -22,6 +26,7 @@ typedef struct taskOneQueueMessage {
     int SensorCount;
     int SensorAvg;
     int Time;
+    int Sequence;
 } taskOneQueueMessage;
 
 void createTaskOneQueue();

@@ -15,7 +15,7 @@
 
 void *sensor_task(void *arg0) {
     dbgEvent(ENTER_SENSOR_TASK);
-    SensorThreadMessage sensorMessage;
+    static SensorThreadMessage sensorMessage;
 
     dbgEvent(BEFORE_SENSOR_LOOP);
     while(1) {

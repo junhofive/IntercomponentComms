@@ -54,12 +54,10 @@ void *timer500Thread(void *arg0){
  */
 void timer500Callback(Timer_Handle myHandle, int_fast16_t status){
     dbgEvent(ENTER_TIMER500);
-    SensorThreadMessage message;
+    static SensorThreadMessage message;
 
-    bool inISR = HwiP_inISR(); // in order to determine in ISR or not
-
-    TickType_t tick_count;
-    if (inISR == true){
+    static TickType_t tick_count;
+    if (HwiP_inISR()){
         tick_count = xTaskGetTickCountFromISR();
     }
     else{
@@ -69,9 +67,8 @@ void timer500Callback(Timer_Handle myHandle, int_fast16_t status){
     // convert tick_count to microseconds
     // See FreeRTOSConfig.h for tick rate
     // Rate = 1000 Hz for now -> 1ms period -> 1000 microsecond
-    int elapsed_time = tick_count;
 
-    message.value = elapsed_time;
+    message.value = tick_count;
     message.message_type = TIMER500_MESSAGE;
 
     // send to message queue

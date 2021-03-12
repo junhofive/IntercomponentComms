@@ -9,7 +9,7 @@
 #include <ti/drivers/dpl/HwiP.h>
 #include "debug.h"
 
-#define QUEUE_LENGTH 30
+#define QUEUE_LENGTH 3
 
 static QueueHandle_t task_two_queue = NULL;
 

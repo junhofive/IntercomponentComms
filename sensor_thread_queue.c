@@ -6,10 +6,11 @@
  */
 
 #include "sensor_thread_queue.h"
+#include <ti/drivers/dpl/HwiP.h>
 #include "timer70.h"
 #include "debug.h"
 
-#define QUEUE_LENGTH 30
+#define QUEUE_LENGTH 3
 /* Static Variable */
 static QueueHandle_t sensor_thread_queue = NULL;
 
@@ -22,14 +23,32 @@ void createSensorThreadQueue() {
 
 SensorThreadMessage receiveFromSensorThreadQueue() {
     static SensorThreadMessage receivedMsg;
-    if (xQueueReceive(sensor_thread_queue, &receivedMsg, portMAX_DELAY) != pdTRUE) {
+    static BaseType_t status;
+
+    if (HwiP_inISR()) {
+        status = xQueueReceiveFromISR(sensor_thread_queue, &receivedMsg, NULL);
+    }
+    else {
+        status = xQueueReceive(sensor_thread_queue, &receivedMsg, portMAX_DELAY);
+    }
+
+    if (status != pdTRUE) {
         handleFatalError(SENSOR_QUEUE_NOT_RECEIVED);
     }
     return receivedMsg;
 }
 
 void sendToSensorThreadQueueFromISR(SensorThreadMessage* targetMessage) {
-    if (xQueueSendFromISR(sensor_thread_queue, targetMessage, NULL) != pdTRUE) {
+    static BaseType_t status;
+
+    if (HwiP_inISR()) {
+        status = xQueueSendFromISR(sensor_thread_queue, targetMessage, NULL);
+    }
+    else {
+        status = xQueueSend(sensor_thread_queue, targetMessage, portMAX_DELAY);
+    }
+
+    if (status != pdTRUE) {
         handleFatalError(SENSOR_QUEUE_NOT_SENT);
     }
 }

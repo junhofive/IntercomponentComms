@@ -9,14 +9,14 @@
 #include <ti/drivers/dpl/HwiP.h>
 #include "debug.h"
 
-#define QUEUE_LENGTH 50
+#define QUEUE_LENGTH 5
 
 static QueueHandle_t mqtt_event_queue = NULL;
 
 void createMqttEventQueue() {
     mqtt_event_queue = xQueueCreate(QUEUE_LENGTH, sizeof(mqttEventQueueMessage));
    if (mqtt_event_queue == NULL){
-//       handleFatalError(mqtt_event_queue_NOT_CREATED);
+       handleFatalError(MQTT_EVENT_QUEUE_NOT_CREATED);
    }
 }
 mqttEventQueueMessage receiveFromMqttEventQueue() {
@@ -30,7 +30,7 @@ mqttEventQueueMessage receiveFromMqttEventQueue() {
     }
 
     if (status != pdTRUE) {
-//        handleFatalError(mqtt_event_queue_NOT_RECEIVED);
+        handleFatalError(MQTT_EVENT_QUEUE_NOT_RECEIVED);
     }
     return receivedMsg;
 }
@@ -46,7 +46,7 @@ void sendToMqttEventQueue(mqttEventQueueMessage* targetMessage) {
     }
 
     if (status != pdTRUE) {
-//        handleFatalError(mqtt_event_queue_NOT_SENT);
+        handleFatalError(MQTT_EVENT_QUEUE_NOT_SENT);
     }
 }
 

@@ -18,7 +18,11 @@ typedef enum {
 
 typedef struct statisticsQueueMessage {
     statType stat_type;
-//    int taskOneMsgTotal; // For J/T: We don't need SensorCount
+    int timer_count;
+    int J_MsgCnt;
+    int T_MsgCnt;
+    int J_sequence;
+    int T_sequence;
     int ChainCount;
 } statisticsQueueMessage;
 
