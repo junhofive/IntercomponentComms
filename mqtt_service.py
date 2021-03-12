@@ -1,7 +1,8 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout, QTabWidget, QLabel, QScrollArea
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout, QTabWidget, QLabel, QScrollArea, QLineEdit, QPushButton, QComboBox
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSlot, Qt, QObject, pyqtSignal
+from PyQt5.QtGui import QFont
 import sys
 
 import paho.mqtt.client as mqtt
@@ -11,11 +12,14 @@ import time
 
 '''
 # References:
-PyQt5 table: https://pythonspot.com/pyqt5-table/    
-Resize table: https://stackoverflow.com/questions/40995778/resize-column-width-to-fit-into-the-qtablewidget-pyqt
+PyQt table: https://pythonspot.com/pyqt5-table/    
+PyQt Resize table: https://stackoverflow.com/questions/40995778/resize-column-width-to-fit-into-the-qtablewidget-pyqt
 PyQt tabwidget: https://pythonbasics.org/pyqt-tabwidget/
-QScrollArea: https://www.learnpyqt.com/tutorials/qscrollarea/
+PyQt QScrollArea: https://www.learnpyqt.com/tutorials/qscrollarea/
 PyQt wake main thread from non-QThread: https://stackoverflow.com/questions/39870577/pyqt-wake-main-thread-from-non-qthread
+PyQt Textbox Example: https://pythonspot.com/pyqt5-textbox-example/
+PyQt Combobox Example: https://pythonbasics.org/pyqt-combobox/
+PyQt change label font: https://www.geeksforgeeks.org/pyqt5-how-to-change-font-and-size-of-label-text/
 '''
 
 def calculate_checksum(payload):
@@ -143,7 +147,7 @@ class App_Dashboard(QWidget): # inherit from QMainWindow
         self.initUI() 
                               
     def initUI(self):
-        self.setGeometry(300, 300, 550, 370)
+        self.setGeometry(300, 300, 1150, 370)
         self.setWindowTitle("Dashboard - Team 7")
         self.tabWidget = QTabWidget(self)
         
@@ -172,8 +176,109 @@ class App_Dashboard(QWidget): # inherit from QMainWindow
         self.tableWidget.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
         self.tabWidget.addTab(self.tableWidget, "Results")
 
+        # Chain Value Publish Box (Text box with a button)
+        self.label1 = QLabel("Publish to Chain",self)
+        self.label1.setFont(QFont('Times font', 12)) 
+        self.label1.resize(300,100)
+        self.label1.move(575,0)
+        self.label2 = QLabel("Input your value:",self)
+        self.label2.setFont(QFont('Arial', 8)) 
+        self.label2.resize(100,60)
+        self.label2.move(575,55)
+        self.textbox_chain = QLineEdit(self)
+        self.textbox_chain.move(680, 70)
+        self.textbox_chain.resize(280,30)
+        # Create a button in the window
+        self.button1 = QPushButton('Publish', self)
+        self.button1.resize(100,30)
+        self.button1.move(980,70)
+        self.button1.clicked.connect(self.click_publish_chain)
+
+
+        # Error Checking
+        x = 20
+        self.board_select = 1  # 0  for Terry's board, 1 for Jason's board, default = 1
+        self.label3 = QLabel("Error Checking",self)
+        self.label3.setFont(QFont('Times font', 12)) 
+        self.label3.resize(300,100)
+        self.label3.move(575,110)
+        self.label4 = QLabel("Select Board",self)
+        self.label4.resize(100,100)
+        self.label4.move(575,125+x)
+        self.label5 = QLabel("Sequence #",self)
+        self.label5.resize(100,60)
+        self.label5.move(575,185+x)
+        self.textbox_seq = QLineEdit(self)
+        self.textbox_seq.move(680, 200+x)
+        self.textbox_seq.resize(280,30)
+        # Create a button in the window
+        self.button2 = QPushButton('Publish', self)
+        self.button2.resize(100,30)
+        self.button2.move(980,200+x)
+        self.button2.clicked.connect(self.click_publish_seq)
+        # Selection box - can either be jason board or terry board
+        self.selectionbox = QComboBox(self)
+        self.selectionbox.addItem("JasonBoard")
+        self.selectionbox.addItem("TerryBoard")
+        self.selectionbox.resize(120,30)
+        self.selectionbox.move(680, 160+x)
+        self.selectionbox.currentIndexChanged.connect(self.selectionchange)
+
+
+        # Start + Stop Buttons
+        self.label3 = QLabel("Demo",self)
+        self.label3.setFont(QFont('Times font', 12)) 
+        self.label3.resize(300,100)
+        self.label3.move(575,240)
+        self.button_start = QPushButton('START', self)
+        self.button_start.resize(100,40)
+        self.button_start.move(680,300)
+        self.button_start.clicked.connect(self.click_start)
+        self.button_stop = QPushButton('STOP', self)
+        self.button_stop.resize(100,40)
+        self.button_stop.move(860,300)
+        self.button_stop.clicked.connect(self.click_stop)
+
         # Signal
         self.dataReceived.connect(self.receive)
+
+    @pyqtSlot()
+    def click_publish_chain(self):
+        value = self.textbox_chain.text() # take the value input in the textbox
+        # mqtt.publish(value)
+        print("you clicked pub chain! Value = ", value)
+
+    @pyqtSlot()
+    def click_publish_seq(self):
+        value = self.textbox_seq.text() # take the value input in the textbox
+        # mqtt.publish(value)
+        print("you clicked seq! Value = ", value)
+        if self.board_select == 0:
+            print("you're publishing to Terry's board")
+        if self.board_select == 1:
+            print("you're publishing to Jason's board")
+
+
+    @pyqtSlot()
+    def click_start(self):
+        # mqtt.publish(value)
+        print("you clicked start!")
+
+    @pyqtSlot()
+    def click_stop(self):
+        value = self.textbox_seq.text() # take the value input in the textbox
+        # mqtt.publish(value)
+        print("you clicked stop!")
+
+
+    def selectionchange(self):
+        if self.selectionbox.currentText() == "JasonBoard":
+            self.board_select = 1
+        if self.selectionbox.currentText() == "TerryBoard":
+            self.board_select = 0
+
+        print("Right now, you're selecting: ", self.selectionbox.currentText())
+
 
     def receive(self, data):
         #print("data = ", data)
