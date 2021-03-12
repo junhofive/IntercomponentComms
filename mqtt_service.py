@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout, \
-    QTabWidget, QLabel, QScrollArea, QLineEdit, QPushButton, QComboBox
+    QTabWidget, QLabel, QLineEdit, QPushButton, QComboBox, QGridLayout, QListWidget, QScrollBar
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSlot, Qt, QObject, pyqtSignal
 from PyQt5.QtGui import QFont
@@ -15,12 +15,12 @@ import time
 PyQt table: https://pythonspot.com/pyqt5-table/    
 PyQt Resize table: https://stackoverflow.com/questions/40995778/resize-column-width-to-fit-into-the-qtablewidget-pyqt
 PyQt tabwidget: https://pythonbasics.org/pyqt-tabwidget/
-PyQt QScrollArea: https://www.learnpyqt.com/tutorials/qscrollarea/
 PyQt wake main thread from non-QThread: https://stackoverflow.com/questions/39870577/pyqt-wake-main-thread-from-non-qthread
 PyQt Textbox Example: https://pythonspot.com/pyqt5-textbox-example/
 PyQt Combobox Example: https://pythonbasics.org/pyqt-combobox/
 PyQt change label font: https://www.geeksforgeeks.org/pyqt5-how-to-change-font-and-size-of-label-text/
-AirMQTT: https://airmqtt.com/projects
+PyQt5 QListWidget: https://www.geeksforgeeks.org/pyqt5-qlistwidget-setting-vertical-scroll-bar/
+AirMQTT Project - Send a MQTT Message using Python: https://airmqtt.com/projects
 '''
 
 
@@ -182,7 +182,6 @@ def on_message_stop(client, userdata, message):
 def on_disconnect(client, userdata, message):
     client.loop_stop()
 
-
 # _____________________________________________________________________________________________________________________________________________________________
 # QT Class
 class App_Dashboard(QWidget):  # inherit from QMainWindow
@@ -193,7 +192,7 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.initUI()
 
     def initUI(self):
-        self.setGeometry(300, 300, 1150, 370)
+        self.setGeometry(300, 300, 1100, 450)
         self.setWindowTitle("Dashboard - Team 7")
         self.tabWidget = QTabWidget(self)
 
@@ -211,7 +210,8 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.tableWidget.setItem(0, 3, QTableWidgetItem("Ajay's Board"))
         self.tableWidget.setItem(6, 0, QTableWidgetItem("Chain Value"))
         self.tableWidget.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
-        self.tabWidget.addTab(self.tableWidget, "Results")
+
+
         # Chain Value Publish Box (Text box with a button)
         self.label1 = QLabel("Publish to Chain", self)
         self.label1.setFont(QFont('Times font', 12))
@@ -229,6 +229,7 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.button1.resize(100, 30)
         self.button1.move(980, 70)
         self.button1.clicked.connect(self.click_publish_chain)
+
 
         # Error Checking
         x = 20
@@ -259,6 +260,7 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         # self.selectionbox.move(680, 160 + x)
         # self.selectionbox.currentIndexChanged.connect(self.selectionchange)
 
+
         # Start + Stop Buttons
         self.label3 = QLabel("Demo", self)
         self.label3.setFont(QFont('Times font', 12))
@@ -273,18 +275,19 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.button_stop.move(860, 300)
         self.button_stop.clicked.connect(self.click_stop)
 
-        # Scroll Area
-        self.scroll = QScrollArea(self)
-        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll.setWidgetResizable(True)
-        self.vbox = QVBoxLayout()
-        self.widget = QWidget()
 
-
+        # List of messages
+        self.list_counter = 0
+        self.msg_list = QListWidget(self)
+        self.msg_list.setGeometry(50, 70, 150, 80) 
+        self.scroll_bar = QScrollBar(self) 
+        self.msg_list.setVerticalScrollBar(self.scroll_bar) 
+        self.msg_list.resize(1100,100)
+        self.msg_list.move(0,350)
+        
         # Signal
         self.dataReceived.connect(self.receive)
-
+        
 
 
     @pyqtSlot()
@@ -321,6 +324,7 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
 
     @pyqtSlot()
     def click_start(self):
+        self.display_message(("START command has been called."))
         mqttc.publish("start", "START")
 
     @pyqtSlot()
@@ -332,7 +336,6 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
             self.board_select = 1
         if self.selectionbox.currentText() == "TerryBoard":
             self.board_select = 0
-        # print("Right now, you're selecting: ", self.selectionbox.currentText())
 
     def receive(self, data):
         # print("data = ", data)
@@ -344,34 +347,16 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
             self.updateTableForAjay()
         elif data == "Chain Value Needs Update":
             self.updateTableForChain()
-        # else:  # display message in the scroll windoww
-        #     self.display_message(data)
+        else:  # display message in the list
+            self.display_message(data)
 
     def callback(self, data):
         # print("QT callback")
         self.dataReceived.emit(data)
 
     def display_message(self, msg):
-        # store the msg in a label
-        label = QLabel(msg)
-        self.vbox.addWidget(label)
-
-        # delete previous widget, create a new one (refresh)
-        self.widget.deleteLater()
-        self.widget = QWidget()
-        self.widget.setLayout(self.vbox)
-
-        # delete previous scroll window, create a new one
-        self.scroll.deleteLater()
-        self.scroll = QScrollArea(self)
-        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setWidget(self.widget)
-
-        # add to the "messages" tab
-        self.tabWidget.addTab(self.scroll, "Messages")
-
+        self.msg_list.insertItem(self.list_counter, msg)
+        self.list_counter += 1
         self.show()
 
     def updateTableForTerry(self):
@@ -381,8 +366,6 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.tableWidget.setItem(4, 2, QTableWidgetItem(str(Missing_T)))
         self.tableWidget.setItem(5, 2, QTableWidgetItem(str(time.strftime('%H:%M:%S'))))
         self.tableWidget.resizeColumnsToContents()
-        # add to tab
-        self.tabWidget.addTab(self.tableWidget, "Results")
         self.show()
 
     def updateTableForJason(self):
@@ -392,8 +375,6 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.tableWidget.setItem(4, 1, QTableWidgetItem(str(Missing_J)))
         self.tableWidget.setItem(5, 1, QTableWidgetItem(str(time.strftime('%H:%M:%S'))))
         self.tableWidget.resizeColumnsToContents()
-        # add to tab
-        self.tabWidget.addTab(self.tableWidget, "Results")
         self.show()
 
     def updateTableForAjay(self):
@@ -403,8 +384,6 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.tableWidget.setItem(4, 3, QTableWidgetItem(str(Missing_A)))
         self.tableWidget.setItem(5, 3, QTableWidgetItem(str(time.strftime('%H:%M:%S'))))
         self.tableWidget.resizeColumnsToContents()
-        # add to tab
-        self.tabWidget.addTab(self.tableWidget, "Results")
         self.show()
 
 
@@ -413,8 +392,6 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.tableWidget.setItem(6, 2, QTableWidgetItem(str(chain_value_T)))
         self.tableWidget.setItem(6, 3, QTableWidgetItem(str(chain_value_A)))
         self.tableWidget.resizeColumnsToContents()
-        # add to tab
-        self.tabWidget.addTab(self.tableWidget, "Results")
         self.show()
 
 
@@ -475,11 +452,6 @@ mqttc.will_set("Client", payload="STOPPED", qos=0, retain=False)
 dashboard.display_message("Connecting to Broker...")
 mqttc.connect(host, port=port)
 
-'''
-mqttc.message_callback_add('AjayBoard', on_message_ajay)
-mqttc.message_callback_add('TerryBoard', on_message_others)
-mqttc.message_callback_add('JasonBoard', on_message_others)
-'''
 mqttc.message_callback_add('AjayStatus', on_message_status_Ajay)
 mqttc.message_callback_add('TerryStatus', on_message_status_Terry)
 mqttc.message_callback_add('JasonStatus', on_message_status_Jason)
@@ -512,4 +484,3 @@ mqttc.subscribe(('stop', 0))
 dashboard.display_message("Subsribe to all topics success! ")
 mqttc.loop_start()
 sys.exit(app.exec_())
-# mqttc.loop_forever()
