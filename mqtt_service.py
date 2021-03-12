@@ -103,12 +103,23 @@ def on_message_board_Ajay(client, userdata, message):
     checksum = calculate_checksum(json_parsed_string)
     if checksum == json_parsed_string['Checksum']:  # Valid Checksum
         PubSucs_A += 1
-        for key in json_parsed_string.keys():
-            if key == 'J_MsgCnt':
-                PubSucs_J += json_parsed_string[key]
-            elif key == 'T_MsgCnt':
-                PubSucs_T += json_parsed_string[key]
-        # connector.emit("Successful Publications Update")
+
+def on_message_board_Jason(client, userdata, message):
+    global PubSucs_J, PubSucs_T, PubSucs_A
+    msg = str(message.payload.decode("utf-8"))
+    json_parsed_string = json.loads(msg)
+    checksum = calculate_checksum(json_parsed_string)
+    if checksum == json_parsed_string['Checksum']:  # Valid Checksum
+        PubSucs_J += 1
+
+
+def on_message_board_Terry(client, userdata, message):
+    global PubSucs_J, PubSucs_T, PubSucs_A
+    msg = str(message.payload.decode("utf-8"))
+    json_parsed_string = json.loads(msg)
+    checksum = calculate_checksum(json_parsed_string)
+    if checksum == json_parsed_string['Checksum']:  # Valid Checksum
+        PubSucs_T += 1
 
 
 # Chain
@@ -121,31 +132,32 @@ def on_message_chain1(client, userdata, message):
         chain_value_client = json_parsed_string['Value'] + 1
 
 
-
 def on_message_chain2(client, userdata, message):
-    global chain_value_client, chain_value_J
+    global chain_value_client, chain_value_J, PubSucs_J
     msg = str(message.payload.decode("utf-8"))
     json_parsed_string = json.loads(msg)
     checksum = calculate_checksum(json_parsed_string)
     if checksum == json_parsed_string['Checksum']:
+        PubSucs_J += 1
         chain_value_client = json_parsed_string['Value'] + 2
         chain_value_J = json_parsed_string['Value']
         connector.emit("Chain Value Needs Update")
 
 
 def on_message_chain3(client, userdata, message):
-    global chain_value_client, chain_value_T
+    global chain_value_client, chain_value_T, PubSucs_T
     msg = str(message.payload.decode("utf-8"))
     json_parsed_string = json.loads(msg)
     checksum = calculate_checksum(json_parsed_string)
     if checksum == json_parsed_string['Checksum']:
+        PubSucs_T += 1
         chain_value_client = json_parsed_string['Value'] + 3
         chain_value_T = json_parsed_string['Value']
         connector.emit("Chain Value Needs Update")
 
 
 def on_message_chain4(client, userdata, message):
-    global chain_value_board, chain_value_client, chain_value_A
+    global chain_value_board, chain_value_client, chain_value_A, PubSucs_A
     msg = str(message.payload.decode("utf-8"))
     json_parsed_string = json.loads(msg)
     checksum = calculate_checksum(json_parsed_string)
@@ -155,6 +167,7 @@ def on_message_chain4(client, userdata, message):
             chain_value_A = json_parsed_string['Value']
         else:
             connector.emit("Incorrect Chain Value!")
+        PubSucs_A += 1
         chain_value_board = json_parsed_string['Value']
         connector.emit("Chain Value Needs Update")
 
@@ -183,14 +196,6 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.setGeometry(300, 300, 1150, 370)
         self.setWindowTitle("Dashboard - Team 7")
         self.tabWidget = QTabWidget(self)
-
-        # Scroll Area
-        self.scroll = QScrollArea(self)
-        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll.setWidgetResizable(True)
-        self.vbox = QVBoxLayout()
-        self.widget = QWidget()
 
         # Value Table
         self.tableWidget = QTableWidget(self)
@@ -232,9 +237,9 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.label3.setFont(QFont('Times font', 12))
         self.label3.resize(300, 100)
         self.label3.move(575, 110)
-        self.label4 = QLabel("Select Board", self)
-        self.label4.resize(100, 100)
-        self.label4.move(575, 125 + x)
+        # self.label4 = QLabel("Select Board", self)
+        # self.label4.resize(100, 100)
+        # self.label4.move(575, 125 + x)
         self.label5 = QLabel("Sequence #", self)
         self.label5.resize(100, 60)
         self.label5.move(575, 185 + x)
@@ -247,12 +252,12 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.button2.move(980, 200 + x)
         self.button2.clicked.connect(self.click_publish_seq)
         # Selection box - can either be jason board or terry board
-        self.selectionbox = QComboBox(self)
-        self.selectionbox.addItem("JasonBoard")
-        self.selectionbox.addItem("TerryBoard")
-        self.selectionbox.resize(120, 30)
-        self.selectionbox.move(680, 160 + x)
-        self.selectionbox.currentIndexChanged.connect(self.selectionchange)
+        # self.selectionbox = QComboBox(self)
+        # self.selectionbox.addItem("JasonBoard")
+        # self.selectionbox.addItem("TerryBoard")
+        # self.selectionbox.resize(120, 30)
+        # self.selectionbox.move(680, 160 + x)
+        # self.selectionbox.currentIndexChanged.connect(self.selectionchange)
 
         # Start + Stop Buttons
         self.label3 = QLabel("Demo", self)
@@ -267,14 +272,28 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.button_stop.resize(100, 40)
         self.button_stop.move(860, 300)
         self.button_stop.clicked.connect(self.click_stop)
+
+        # Scroll Area
+        self.scroll = QScrollArea(self)
+        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.scroll.setWidgetResizable(True)
+        self.vbox = QVBoxLayout()
+        self.widget = QWidget()
+
+
         # Signal
         self.dataReceived.connect(self.receive)
 
+
+
     @pyqtSlot()
     def click_publish_chain(self):
+        global chain_sequence
         value = self.textbox_chain.text()  # take the value input in the textbox
         # create the chain JSON message:
-        payload = {"Value": int(value), "ChainCount": 1, "Checksum": 1}
+        chain_sequence += 1
+        payload = {"Value": int(value), "ChainCount": chain_sequence, "Checksum": 1}
         checksum = calculate_checksum(payload)
         payload["Checksum"] = checksum
         payload_str = json.dumps(payload)
@@ -283,17 +302,22 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
     @pyqtSlot()
     def click_publish_seq(self):
         value = self.textbox_seq.text()  # take the value input in the textbox
-        # mqtt.publish(value)
-        topic = ''
-        if self.board_select == 0:
-            topic = 'TerryBoard'
-        else:
-            topic = 'JasonBoard'
-        payload = {"SensorReading": 420, "SensorCount": 420, "Sequence": int(value), "Checksum": 1}
+        payload = {"Value": 420, "ChainCount": int(value), "Checksum": 1}
         checksum = calculate_checksum(payload)
         payload["Checksum"] = checksum
         payload_str = json.dumps(payload)
-        mqttc.publish(topic, payload_str)
+        mqttc.publish("Chain1", payload_str)
+        # mqtt.publish(value)
+        # topic = ''
+        # if self.board_select == 0:
+        #     topic = 'TerryBoard'
+        # else:
+        #     topic = 'JasonBoard'
+        # payload = {"SensorReading": 420, "SensorCount": 420, "Sequence": int(value), "Checksum": 1}
+        # checksum = calculate_checksum(payload)
+        # payload["Checksum"] = checksum
+        # payload_str = json.dumps(payload)
+        # mqttc.publish(topic, payload_str)
 
     @pyqtSlot()
     def click_start(self):
@@ -318,12 +342,10 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
             self.updateTableForJason()
         elif data == "AjayBoard Value Needs Update":
             self.updateTableForAjay()
-        # elif data == "Successful Publications Update":
-        #     self.updatePubSucsForAll()
         elif data == "Chain Value Needs Update":
             self.updateTableForChain()
-        else:  # display message in the scroll windoww
-            self.display_message(data)
+        # else:  # display message in the scroll windoww
+        #     self.display_message(data)
 
     def callback(self, data):
         # print("QT callback")
@@ -385,14 +407,6 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.tabWidget.addTab(self.tableWidget, "Results")
         self.show()
 
-    # def updatePubSucsForAll(self):
-    #     self.tableWidget.setItem(2, 1, QTableWidgetItem(str(PubSucs_J)))
-    #     self.tableWidget.setItem(2, 2, QTableWidgetItem(str(PubSucs_T)))
-    #     self.tableWidget.setItem(2, 3, QTableWidgetItem(str(PubSucs_A)))
-    #     self.tableWidget.resizeColumnsToContents()
-    #
-    #     self.tabWidget.addTab(self.tableWidget, "Results")
-    #     self.show()
 
     def updateTableForChain(self):
         self.tableWidget.setItem(6, 1, QTableWidgetItem(str(chain_value_J)))
@@ -445,6 +459,8 @@ chain_value_J = 0
 chain_value_T = 0
 chain_value_A = 0
 
+chain_sequence = 0
+
 # Create Client Object
 mqttc = mqtt.Client(client_id="testing_client1")
 
@@ -469,6 +485,8 @@ mqttc.message_callback_add('TerryStatus', on_message_status_Terry)
 mqttc.message_callback_add('JasonStatus', on_message_status_Jason)
 
 mqttc.message_callback_add('AjayBoard', on_message_board_Ajay)
+mqttc.message_callback_add('TerryBoard', on_message_board_Terry)
+mqttc.message_callback_add('JasonBoard', on_message_board_Jason)
 
 mqttc.message_callback_add('Chain1', on_message_chain1)
 mqttc.message_callback_add('Chain2', on_message_chain2)
@@ -484,7 +502,10 @@ mqttc.subscribe(('Chain4', 0))
 mqttc.subscribe(('AjayStatus', 0))
 mqttc.subscribe(('JasonStatus', 0))
 mqttc.subscribe(('TerryStatus', 0))
+
 mqttc.subscribe(('AjayBoard', 0))
+mqttc.subscribe(('TerryBoard', 0))
+mqttc.subscribe(('JasonBoard', 0))
 
 mqttc.subscribe(('stop', 0))
 
