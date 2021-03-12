@@ -77,8 +77,8 @@
 #include "statistics_queue.h"
 #include "statistics_task.h"
 
-#define THREADSTACKSIZE   (1024)
-#define THREADSTACKSIZE_SM (768)
+#define THREADSTACKSIZE   (896)
+//#define THREADSTACKSIZE_SM (768)
 
 extern int32_t ti_net_SlNet_initConfig();
 
@@ -94,8 +94,8 @@ extern int32_t ti_net_SlNet_initConfig();
 #define MQTT_MODULE_TASK_PRIORITY   2
 #define MQTT_MODULE_TASK_STACK_SIZE 2048
 
-#define MQTT_WILL_TOPIC             "jesus_cc32xx_will_topic"
-#define MQTT_WILL_MSG               "will_msg_works"
+#define MQTT_WILL_TOPIC             "JasonBoardWill"
+#define MQTT_WILL_MSG               "Disconnected"
 #define MQTT_WILL_QOS               MQTT_QOS_0
 #define MQTT_WILL_RETAIN            false
 
@@ -320,8 +320,6 @@ void MQTT_EventCallback(int32_t event){
         case MQTT_EVENT_CONNACK:
         {
             LOG_INFO("MQTT_EVENT_CONNACK\r\n");
-//            GPIO_clearInt(CONFIG_GPIO_BUTTON_1);
-//            GPIO_enableInt(CONFIG_GPIO_BUTTON_1);
             break;
         }
 
@@ -489,7 +487,6 @@ void mainThread(void * args){
     dbgEvent(ENTER_MAIN_THREAD);
     int32_t ret;
     UART_Handle uartHandle;
-    mqttPublishQueueMessage queueElement;
     MQTTClient_Handle mqttClientHandle;
 
     pthread_t           timer70_thread, timer500_thread, sensor_thread, stat_thread,
@@ -515,11 +512,11 @@ void mainThread(void * args){
 //    GPIO_write(CONFIG_GPIO_LED_0, CONFIG_GPIO_LED_OFF);
 
     createMqttPublishQueue();
-    createSensorThreadQueue();
+//    createSensorThreadQueue();
     createTaskOneQueue();
     createTaskTwoQueue();
 
-//    createStatisticsQueue();
+    createStatisticsQueue();
 
     ret = WifiInit();
     if(ret < 0){
@@ -541,15 +538,10 @@ void mainThread(void * args){
      * messages for the client, after CONNACK the client may receive the messages before the module is aware
      * of the topic callbacks. The user may still call subscribe after connect but have to be aware of this.
      */
-#if 0
-    ret = MQTT_IF_Subscribe(mqttClientHandle, "Chain1", MQTT_QOS_0, ChainCB);
-#endif
-//    ret = MQTT_IF_Subscribe(mqttClientHandle, "JasonBoard", MQTT_QOS_0, JasonCB);
-//    ret |= MQTT_IF_Subscribe(mqttClientHandle, "TerryBoard", MQTT_QOS_0, TerryCB);
-    ret = MQTT_IF_Subscribe(mqttClientHandle, "Chain1", MQTT_QOS_0, ChainCB);
-//    ret |= MQTT_IF_Subscribe(mqttClientHandle, "Chain1", MQTT_QOS_0, ToggleLED1CB);
-//    ret |= MQTT_IF_Subscribe(mqttClientHandle, "cc32xx/ToggleLED2", MQTT_QOS_0, ToggleLED2CB);
-//    ret |= MQTT_IF_Subscribe(mqttClientHandle, "cc32xx/ToggleLED3", MQTT_QOS_0, ToggleLED3CB);
+
+    ret = MQTT_IF_Subscribe(mqttClientHandle, "JasonBoard", MQTT_QOS_0, JasonCB);
+    ret |= MQTT_IF_Subscribe(mqttClientHandle, "TerryBoard", MQTT_QOS_0, TerryCB);
+    ret = MQTT_IF_Subscribe(mqttClientHandle, "Chain3", MQTT_QOS_0, ChainCB);
     if(ret < 0){
         handleFatalError(MQTT_SUBSCRIPTION_FAILED);
     }
@@ -568,14 +560,14 @@ void mainThread(void * args){
     priParam.sched_priority = 1;
     retc = pthread_attr_setschedparam(&attrs, &priParam);
 
-    retc |= pthread_attr_setstacksize(&attrs, THREADSTACKSIZE); // THREADSTACKSIZE_SM
-
+    retc |= pthread_attr_setstacksize(&attrs, THREADSTACKSIZE);
+#if 0
     retc = pthread_create(&timer70_thread, &attrs, timer70Thread, NULL);
     if (retc != 0) {
             /* pthread_create() failed */
-
         handleFatalError(PTHREAD_NOT_CREATED);
     }
+
     retc = pthread_create(&timer500_thread, &attrs, timer500Thread, NULL);
     if (retc != 0) {
             /* pthread_create() failed */
@@ -587,12 +579,7 @@ void mainThread(void * args){
         /* pthread_create() failed */
         handleFatalError(PTHREAD_NOT_CREATED);
     }
-//    retc = pthread_create(&stat_thread, &attrs, task_statistics, NULL);
-//    if (retc != 0) {
-//                /* pthread_create() failed */
-//            //
-//        handleFatalError(PTHREAD_NOT_CREATED);
-//    }
+#endif
     retc = pthread_create(&task_one_thread, &attrs, task_one, NULL);
     if (retc != 0) {
         /* pthread_create() failed */
@@ -601,13 +588,17 @@ void mainThread(void * args){
 
     retc = pthread_create(&task_two_thread, &attrs, task_two, NULL);
     if (retc != 0) {
+        handleFatalError(PTHREAD_NOT_CREATED);
+    }
+    retc = pthread_create(&stat_thread, &attrs, task_statistics, NULL);
+    if (retc != 0) {
         /* pthread_create() failed */
-
+        //
         handleFatalError(PTHREAD_NOT_CREATED);
     }
 
 
-
+    static mqttPublishQueueMessage queueElement;
 
     dbgEvent(BEFORE_MAIN_LOOP);
     while(1){
@@ -618,6 +609,7 @@ void mainThread(void * args){
 
         if(queueElement.event == APP_MQTT_PUBLISH){
             dbgEvent(BEFORE_PUBLISH_TO_MQTT);
+#if 0
             if (queueElement.topic_type == TASK_ONE_TOPIC) {
                 MQTT_IF_Publish(mqttClientHandle,
                                 "JasonBoard",
@@ -632,16 +624,16 @@ void mainThread(void * args){
                                 strlen(queueElement.payload),
                                 MQTT_QOS_0);
             }
-//            else if (queueElement.topic_type == STATUS_TOPIC) {
-//                LOG_INFO("HERE\r\n");
-//                MQTT_IF_Publish(mqttClientHandle,
-//                                "JasonStatus",
-//                                queueElement.payload,
-//                                strlen(queueElement.payload),
-//                                MQTT_QOS_0);
-//            }
-            dbgEvent(AFTER_PUBLISH_TO_MQTT);
-#if 0
+            else if (queueElement.topic_type == STATUS_TOPIC) {
+                MQTT_IF_Publish(mqttClientHandle,
+                                "JasonStatus",
+                                queueElement.payload,
+                                strlen(queueElement.payload),
+                                MQTT_QOS_0);
+            }
+#endif
+
+
             if (queueElement.topic_type == TASK_ONE_TOPIC) {
                 MQTT_IF_Publish(mqttClientHandle,
                                 "AjayBoard",
@@ -656,7 +648,15 @@ void mainThread(void * args){
                                 strlen(queueElement.payload),
                                 MQTT_QOS_0);
             }
-#endif
+            else if (queueElement.topic_type == STATUS_TOPIC) {
+                MQTT_IF_Publish(mqttClientHandle,
+                                "AjayStatus",
+                                queueElement.payload,
+                                strlen(queueElement.payload),
+                                MQTT_QOS_0);
+            }
+
+            dbgEvent(AFTER_PUBLISH_TO_MQTT);
         }
     }
 }
