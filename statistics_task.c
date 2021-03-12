@@ -24,7 +24,7 @@ enum{
     APP_MQTT_DEINIT,
     APP_BTN_HANDLER
 };
-
+#if 0
 static int totalTaskOneSent,
             totalTaskTwoSent,
             J_sequence,
@@ -79,16 +79,15 @@ void *task_statistics(void *arg0) {
         }
     }
 }
+#endif
 
-
-
-#if 0
 static int totalTaskOneSent,
             totalTaskTwoSent,
             receiveSuccess,
             receiveTotal;
 
 void *task_statistics(void *arg0) {
+    dbgEvent(ENTER_STATISTICS);
     totalTaskOneSent = 0;
     totalTaskTwoSent = 0;
     receiveSuccess = 0;
@@ -96,9 +95,11 @@ void *task_statistics(void *arg0) {
     static statisticsQueueMessage receivedMsg;
     static mqttPublishQueueMessage msgToSend;
     static int checksum;
-
+    dbgEvent(BEFORE_STATISTICS_LOOP);
     while(1) {
+        dbgEvent(BEFORE_RECV_FROM_STAT_QUEUE);
         receivedMsg = receiveFromStatisticsQueue();
+        dbgEvent(AFTER_RECV_FROM_STAT_QUEUE);
         if (receivedMsg.stat_type == TASK_ONE_STAT) {
             totalTaskOneSent++;
             if (receivedMsg.timer_count == 10) {
@@ -115,14 +116,15 @@ void *task_statistics(void *arg0) {
                          receiveSuccess,
                          receiveTotal,
                          receiveSuccess - receiveTotal, checksum);
+                dbgEvent(BEFORE_SEND_STAT_TO_PUBLISH);
                 sendToMqttPublishQueue(&msgToSend);
+                dbgEvent(AFTER_SEND_STAT_TO_PUBLISH);
             }
         }
         else if (receivedMsg.stat_type == TASK_TWO_STAT) {
             totalTaskTwoSent++;
             receiveTotal++;
-            receiveSuccess = receivedMsg.sequence;
+            receiveSuccess = receivedMsg.ChainCount;
         }
     }
 }
-#endif

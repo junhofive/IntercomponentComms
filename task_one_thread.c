@@ -24,7 +24,7 @@ enum{
     APP_MQTT_DEINIT,
     APP_BTN_HANDLER
 };
-
+#if 0
 static int MsgCount_Jason,
             MsgCount_Terry,
             SensorCnt_Jason,
@@ -157,10 +157,8 @@ void timer1000Callback(Timer_Handle myHandle, int_fast16_t status){
     SensorAvg_Jason = 0;
     SensorAvg_Terry = 0;
 }
+#endif
 
-
-
-#if 0
 void *task_one(void *arg0) {
     dbgEvent(ENTER_TASK_ONE);
     static taskOneQueueMessage receivedMsg;
@@ -216,8 +214,9 @@ void *task_one(void *arg0) {
         sendToMqttPublishQueue(&msgToSend);
         dbgEvent(AFTER_SEND_TASK_ONE_MSG_TO_MQTT);
 
-
+        dbgEvent(BEFORE_SEND_TO_STATISTICS);
         sendToStatisticsQueue(&statusMsg);
+        dbgEvent(AFTER_SEND_TO_STATISTICS);
     }
 }
-#endif
+

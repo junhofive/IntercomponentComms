@@ -35,11 +35,18 @@
 
 /* Timer 70 */
 #define ENTER_TIMER70                       0x10
-#define LEAVE_TIMER70                       0x19
+#define LEAVE_TIMER70                       0x11
 
 /* Timer 500 */
-#define ENTER_TIMER500                      0x1a
-#define LEAVE_TIMER500                      0x1f
+#define ENTER_TIMER500                      0x12
+#define LEAVE_TIMER500                      0x13
+
+/* MQTT If */
+#define ENTER_CLIENT_CALLBACK               0x1a
+#define LEAVE_CLIENT_CALLBACK               0x1b
+
+#define BEFORE_SEND_TASK_TWO_MSG            0x1c
+#define AFTER_SEND_TASK_TWO_MSG             0x1d
 
 /* Sensor Task */
 #define ENTER_SENSOR_TASK                   0x20
@@ -70,15 +77,23 @@
 #define BEFORE_SEND_TIMER500_MSG            0x35
 #define AFTER_SEND_TIMER500_MSG             0x36
 
-/* UART Queue */
-#define BEFORE_RECEIVE_UART_QUEUE           0x41
-#define AFTER_RECEIVE_UART_QUEUE            0x42
+/* MQTT Event Queue */
+#define BEFORE_RECEIVE_EVENT_QUEUE          0x41
+#define AFTER_RECEIVE_EVENT_QUEUE           0x42
 
-#define BEFORE_SEND_TYPE70_MSG              0x43
-#define AFTER_SEND_TYPE70_MSG               0x44
+/* Statistics Queue */
+#define BEFORE_SEND_TO_STATISTICS           0x43
+#define AFTER_SEND_TO_STATISTICS            0x44
 
-#define BEFORE_SEND_TYPE500_MSG             0x45
-#define AFTER_SEND_TYPE500_MSG              0x46
+#define BEFORE_RECV_FROM_STAT_QUEUE         0x45
+#define AFTER_RECV_FROM_STAT_QUEUE          0x45
+
+/* Statistics Task */
+#define ENTER_STATISTICS                    0x46
+#define BEFORE_STATISTICS_LOOP              0x47
+
+#define BEFORE_SEND_STAT_TO_PUBLISH         0x48
+#define AFTER_SEND_STAT_TO_PUBLISH          0x49
 
 /* MQTT Publish Queue */
 #define BEFORE_RECEIVE_MQTT_PUBLISH_QUE     0x4a

@@ -51,7 +51,9 @@ void *task_two(void *arg0) {
         sendToMqttPublishQueue(&msgToSend);
         dbgEvent(AFTER_SEND_TASK_TWO_MSG_TO_MQTT);
 
+        dbgEvent(BEFORE_SEND_TO_STATISTICS);
         sendToStatisticsQueue(&statusMsg);
+        dbgEvent(AFTER_SEND_TO_STATISTICS);
 
     }
 

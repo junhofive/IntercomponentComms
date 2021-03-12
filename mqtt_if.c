@@ -22,12 +22,16 @@
 #include "debug.h"
 #include "jsmn.h"
 #include "str_converter.h"
+#include "timer70.h"
+#include "timer500.h"
 
 enum{
     MQTT_STATE_IDLE,
     MQTT_STATE_INITIALIZED,
     MQTT_STATE_CONNECTED
 };
+
+#define THREADSTACKSIZE   (896)
 
 #define MQTT_EVENT_RECV MQTT_EVENT_MAX  // event for when receiving data from subscribed topics
 
@@ -92,15 +96,17 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
 
 
 #define MAX_TOKENS  20
-//static jsmntok_t tokens[MAX_TOKENS];
 static jsmn_parser parser;
 static jsmntok_t tokens[MAX_TOKENS];
-// Callback invoked by the internal MQTT library to notify the application of MQTT events
 
+static int timer_start = 0;
+
+// Callback invoked by the internal MQTT library to notify the application of MQTT events
 void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, void *data, uint32_t dataLen)
 {
+    dbgEvent(ENTER_CLIENT_CALLBACK);
     static mqttEventQueueMessage message;
-    static taskOneQueueMessage msgTaskOne;
+//    static taskOneQueueMessage msgTaskOne;
     static taskTwoQueueMessage msgTaskTwo;
 
     static int r, i;
@@ -155,7 +161,7 @@ void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, voi
             message.event = MQTT_EVENT_RECV;
 
             jsmn_init(&parser);
-
+#if 0
             if (strncmp(receivedMetaData->topic, "JasonBoard", receivedMetaData->topLen) == 0  ||
                     strncmp(receivedMetaData->topic, "TerryBoard", receivedMetaData->topLen) == 0)  {
 
@@ -211,13 +217,16 @@ void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, voi
                         }
                         LOG_INFO("Calculated Checksum: %d\r\n", calculatedSum);
                         if (receivedSum == calculatedSum) { // Message Verified
+                            dbgEvent(BEFORE_SEND_TASK_TWO_MSG);
                             sendToTaskOneQueue(&msgTaskOne);
+                            dbgEvent(AFTER_SEND_TASK_TWO_MSG);
                         }
                     }
                     i++;
                 }
             }
-            if (strncmp(receivedMetaData->topic, "Chain3", receivedMetaData->topLen) == 0) {
+#endif
+            if (strncmp(receivedMetaData->topic, "Chain1", receivedMetaData->topLen) == 0) {
                 r = jsmn_parse(&parser, data, dataLen, tokens, MAX_TOKENS);
                 if (r < 0) { handleFatalError(0x77); }
                 for (i = 1; i < r; i++) {
@@ -236,12 +245,44 @@ void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, voi
                         calculatedSum += strToSum("ChainCount", strlen("ChainCount")) + msgTaskTwo.ChainCount;
                         LOG_INFO("Calculated Checksum: %d\r\n", calculatedSum);
                         if (receivedSum == calculatedSum) { // Message Verified
+                            dbgEvent(BEFORE_SEND_TASK_TWO_MSG);
                             sendToTaskTwoQueue(&msgTaskTwo);
+                            dbgEvent(AFTER_SEND_TASK_TWO_MSG);
                         }
                     }
                     i++;
                 }
 
+            }
+            if (strncmp(receivedMetaData->topic, "start", receivedMetaData->topLen) == 0) {
+//                LOG_INFO("start recv\r\n");
+                if(strncmp(data, "START", strlen("START")) == 0 && timer_start == 0) {
+                    timer_start = 1;
+                    pthread_t           timer70_thread, timer500_thread;
+                    int                 retc;
+                    pthread_attr_t      attrs;
+                    struct sched_param  priParam;
+                    pthread_attr_init(&attrs);
+
+                    priParam.sched_priority = 1;
+                    retc = pthread_attr_setschedparam(&attrs, &priParam);
+
+                    retc |= pthread_attr_setstacksize(&attrs, THREADSTACKSIZE);
+                    retc = pthread_create(&timer70_thread, &attrs, timer70Thread, NULL);
+                    if (retc != 0) {
+                        /* pthread_create() failed */
+                        handleFatalError(PTHREAD_NOT_CREATED);
+                    }
+
+                    retc = pthread_create(&timer500_thread, &attrs, timer500Thread, NULL);
+                    if (retc != 0) {
+                        /* pthread_create() failed */
+                        handleFatalError(PTHREAD_NOT_CREATED);
+                    }
+                    LOG_INFO("Timers started!\r\n");
+                }
+                else
+                    LOG_INFO("Timers already have started!\r\n");
             }
             break;
         }
@@ -253,7 +294,11 @@ void MQTTClientCallback(int32_t event, void *metaData, uint32_t metaDateLen, voi
         }
 //        break;
     }
+    dbgEvent(LEAVE_CLIENT_CALLBACK);
+
+    dbgEvent(BEFORE_RECEIVE_EVENT_QUEUE);
     sendToMqttEventQueue(&message);
+    dbgEvent(AFTER_RECEIVE_EVENT_QUEUE);
 }
 
 // Helper function used to compare topic strings and accounts for MQTT wild cards
