@@ -113,10 +113,10 @@
 #define SENSOR_QUEUE_NOT_RECEIVED           0x61
 #define SENSOR_QUEUE_NOT_SENT               0x62
 
-/* UART Queue Errors */
-#define UART_QUEUE_NOT_CREATED              0x63
-#define UART_QUEUE_NOT_RECEIVED             0x64
-#define UART_QUEUE_NOT_SENT                 0x65
+/* MQTT Event Errors */
+#define MQTT_EVENT_QUEUE_NOT_CREATED        0x63
+#define MQTT_EVENT_QUEUE_NOT_RECEIVED       0x64
+#define MQTT_EVENT_QUEUE_NOT_SENT           0x65
 
 /* MQTT Publish Queue Errors */
 #define MQTT_PUBLISH_QUEUE_NOT_CREATED      0x67
