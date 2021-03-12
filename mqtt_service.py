@@ -104,6 +104,7 @@ def on_message_board_Ajay(client, userdata, message):
     if checksum == json_parsed_string['Checksum']:  # Valid Checksum
         PubSucs_A += 1
 
+
 def on_message_board_Jason(client, userdata, message):
     global PubSucs_J, PubSucs_T, PubSucs_A
     msg = str(message.payload.decode("utf-8"))
@@ -124,51 +125,51 @@ def on_message_board_Terry(client, userdata, message):
 
 # Chain
 def on_message_chain1(client, userdata, message):
-    global chain_value_client
+    global chain2_value_client
     msg = str(message.payload.decode("utf-8"))
     json_parsed_string = json.loads(msg)
     checksum = calculate_checksum(json_parsed_string)
     if checksum == json_parsed_string['Checksum']:
-        chain_value_client = json_parsed_string['Value'] + 1
+        chain2_value_client = json_parsed_string['Value'] + 1
 
 
 def on_message_chain2(client, userdata, message):
-    global chain_value_client, chain_value_J, PubSucs_J
+    global chain3_value_client, chain_value_J, PubSucs_J
     msg = str(message.payload.decode("utf-8"))
     json_parsed_string = json.loads(msg)
     checksum = calculate_checksum(json_parsed_string)
     if checksum == json_parsed_string['Checksum']:
         PubSucs_J += 1
-        chain_value_client = json_parsed_string['Value'] + 2
+        chain3_value_client = json_parsed_string['Value'] + 2
         chain_value_J = json_parsed_string['Value']
         connector.emit("Chain Value Needs Update")
 
 
 def on_message_chain3(client, userdata, message):
-    global chain_value_client, chain_value_T, PubSucs_T
+    global chain4_value_client, chain_value_T, PubSucs_T
     msg = str(message.payload.decode("utf-8"))
     json_parsed_string = json.loads(msg)
     checksum = calculate_checksum(json_parsed_string)
     if checksum == json_parsed_string['Checksum']:
         PubSucs_T += 1
-        chain_value_client = json_parsed_string['Value'] + 3
+        chain4_value_client = json_parsed_string['Value'] + 3
         chain_value_T = json_parsed_string['Value']
         connector.emit("Chain Value Needs Update")
 
 
 def on_message_chain4(client, userdata, message):
-    global chain_value_board, chain_value_client, chain_value_A, PubSucs_A
+    global chain4_value_client, chain_value_A, PubSucs_A
     msg = str(message.payload.decode("utf-8"))
     json_parsed_string = json.loads(msg)
     checksum = calculate_checksum(json_parsed_string)
     if checksum == json_parsed_string['Checksum']:
-        if chain_value_client == json_parsed_string['Value']:
+        if chain4_value_client == json_parsed_string['Value']:
             connector.emit("Correct Chain Value Received. Chain Validated!")
             chain_value_A = json_parsed_string['Value']
         else:
             connector.emit("Incorrect Chain Value!")
         PubSucs_A += 1
-        chain_value_board = json_parsed_string['Value']
+
         connector.emit("Chain Value Needs Update")
 
 
@@ -181,6 +182,7 @@ def on_message_stop(client, userdata, message):
 
 def on_disconnect(client, userdata, message):
     client.loop_stop()
+
 
 # _____________________________________________________________________________________________________________________________________________________________
 # QT Class
@@ -198,7 +200,7 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
 
         # Value Table
         self.tableWidget = QTableWidget(self)
-        self.tableWidget.setRowCount(7)
+        self.tableWidget.setRowCount(8)
         self.tableWidget.setColumnCount(4)
         self.tableWidget.setItem(1, 0, QTableWidgetItem("# of Published Total"))
         self.tableWidget.setItem(2, 0, QTableWidgetItem("# of Published Success"))
@@ -208,9 +210,9 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.tableWidget.setItem(0, 1, QTableWidgetItem("Jason's Board"))
         self.tableWidget.setItem(0, 2, QTableWidgetItem("Terry's Board"))
         self.tableWidget.setItem(0, 3, QTableWidgetItem("Ajay's Board"))
-        self.tableWidget.setItem(6, 0, QTableWidgetItem("Chain Value"))
+        self.tableWidget.setItem(6, 0, QTableWidgetItem("Chain Value - Received From Boards"))
+        self.tableWidget.setItem(7, 0, QTableWidgetItem("Chain Value - Calculated In Client"))
         self.tableWidget.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
-
 
         # Chain Value Publish Box (Text box with a button)
         self.label1 = QLabel("Publish to Chain", self)
@@ -229,7 +231,6 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.button1.resize(100, 30)
         self.button1.move(980, 70)
         self.button1.clicked.connect(self.click_publish_chain)
-
 
         # Error Checking
         x = 20
@@ -260,7 +261,6 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         # self.selectionbox.move(680, 160 + x)
         # self.selectionbox.currentIndexChanged.connect(self.selectionchange)
 
-
         # Start + Stop Buttons
         self.label3 = QLabel("Demo", self)
         self.label3.setFont(QFont('Times font', 12))
@@ -275,20 +275,17 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.button_stop.move(860, 300)
         self.button_stop.clicked.connect(self.click_stop)
 
-
         # List of messages
         self.list_counter = 0
         self.msg_list = QListWidget(self)
-        self.msg_list.setGeometry(50, 70, 150, 80) 
-        self.scroll_bar = QScrollBar(self) 
-        self.msg_list.setVerticalScrollBar(self.scroll_bar) 
-        self.msg_list.resize(1100,100)
-        self.msg_list.move(0,350)
-        
+        self.msg_list.setGeometry(50, 70, 150, 80)
+        self.scroll_bar = QScrollBar(self)
+        self.msg_list.setVerticalScrollBar(self.scroll_bar)
+        self.msg_list.resize(1100, 100)
+        self.msg_list.move(0, 350)
+
         # Signal
         self.dataReceived.connect(self.receive)
-        
-
 
     @pyqtSlot()
     def click_publish_chain(self):
@@ -386,11 +383,13 @@ class App_Dashboard(QWidget):  # inherit from QMainWindow
         self.tableWidget.resizeColumnsToContents()
         self.show()
 
-
     def updateTableForChain(self):
         self.tableWidget.setItem(6, 1, QTableWidgetItem(str(chain_value_J)))
         self.tableWidget.setItem(6, 2, QTableWidgetItem(str(chain_value_T)))
         self.tableWidget.setItem(6, 3, QTableWidgetItem(str(chain_value_A)))
+        self.tableWidget.setItem(7, 1, QTableWidgetItem(str(chain2_value_client)))
+        self.tableWidget.setItem(7, 2, QTableWidgetItem(str(chain3_value_client)))
+        self.tableWidget.setItem(7, 3, QTableWidgetItem(str(chain4_value_client)))
         self.tableWidget.resizeColumnsToContents()
         self.show()
 
@@ -410,8 +409,8 @@ connector = Connector(dashboard.callback)
 # _____________________________________________________________________________
 host = 's1.airmqtt.com'
 port = 10021
-username = 'h721gyh3'
-password = '1tf7h451'
+username = 'wg3z4rvo'
+password = 'rzxe7rl2'
 
 # Terry
 PubAtmpt_T = 0
@@ -435,6 +434,10 @@ Missing_A = 0
 chain_value_J = 0
 chain_value_T = 0
 chain_value_A = 0
+
+chain2_value_client = 0
+chain3_value_client = 0
+chain4_value_client = 0
 
 chain_sequence = 0
 
